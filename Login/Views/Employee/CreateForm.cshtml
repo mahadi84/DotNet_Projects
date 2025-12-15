@@ -1,0 +1,81 @@
+﻿
+@model Login.Models.Emp 
+@*
+    ১. ডেটা টাইপ নির্ধারণ (Data Typing)
+    ২. IntelliSense এবং কোড কমপ্লিশন (IntelliSense and Code Completion)
+    ৩. ট্যাগ হেল্পার এবং HTML হেল্পার বাইন্ডিং (Tag Helper and HTML Helper Binding)
+    POST হবে, তখন এই ডেটাগুলি স্বয়ংক্রিয়ভাবে কন্ট্রোলারে থাকা User অবজেক্টের মধ্যে ম্যাপ হয়ে যায় (Model Binding)। 
+
+    সংক্ষেপে, @model ডাইরেক্টিভটি হলো View এবং আপনার C# Model-এর মধ্যে একটি যোগসূত্র, যা শক্তিশালী টাইপিং এবং দ্রুত কোড লেখার সুবিধা নিশ্চিত করে।
+*@
+
+@{
+    ViewData["Title"] = "Create New Employee";
+}
+
+<h2>@ViewData["Title"]</h2>
+<hr />
+
+
+
+<div class="row">
+    <div class="col-md-6">
+
+        @{
+            // সফল বার্তা প্রদর্শনের জন্য
+            if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success" role="alert">
+                    @TempData["SuccessMessage"]
+                </div>
+            }
+
+            // ব্যর্থ বার্তা প্রদর্শনের জন্য
+            if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @TempData["ErrorMessage"]
+                </div>
+            }
+        }
+
+
+
+
+
+        @* The form points to the POST version of the Create action *@
+        <form asp-controller="Employee" asp-action="CreateEmployee" method="post">
+            
+            @* Important for security against Cross-Site Request Forgery (CSRF) *@
+            @Html.AntiForgeryToken() 
+
+            <div class="form-group">
+                <label asp-for="Name" class="control-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group">
+                <label asp-for="Designation" class="control-label"></label>
+                <input asp-for="Designation" class="form-control" />
+                <span asp-validation-for="Designation" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Email" class="control-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-4">
+                <input type="submit" value="Create" class="btn btn-success" />
+                @* Link back to the list page *@
+                <a asp-controller="Employee" asp-action="Index" class="btn btn-secondary ml-2">Back to List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

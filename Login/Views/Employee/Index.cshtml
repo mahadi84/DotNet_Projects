@@ -1,0 +1,199 @@
+﻿@model Login.Models.PaginatedList<Login.Models.Emp>
+@using Login.Controllers;  @*  EmployeeController.PageSize অ্যাক্সেস করার জন্য *@
+
+@{
+    ViewData["Title"] = "Employee List";
+}
+
+<br />
+<br />
+<h2>Employee List</h2>
+<hr />
+
+<p>
+    <a asp-action="CreateForm" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add New Employee
+    </a>
+</p>
+
+@* --- সার্চ ফর্ম (ফিল্টারিং) --- *@
+<form asp-action="Index" method="get">
+    <div class="form-actions no-color mb-3">
+        <div class="input-group">
+            <input type="hidden" name="sortOrder" value="@ViewData["CurrentSort"]" />
+            <input type="text"
+                   name="SearchString"
+                   value="@ViewData["CurrentFilter"]"
+                   class="form-control"
+                   placeholder="Search by Name or Email..." />
+
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-info">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+
+            <a asp-action="Index" class="btn btn-secondary ml-2">
+                <i class="fas fa-redo"></i> Clear
+            </a>
+        </div>
+    </div>
+</form>
+
+
+@* সফল বা ব্যর্থ বার্তা দেখানোর জন্য *@
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+
+<br />
+
+
+@* --- কর্মচারী ডেটা টেবিল (সর্টিং সহ) --- *@
+<table class="table">
+    <thead>
+        <tr>
+            <th>Serial</th>
+            <th>
+                <a asp-action="Index"
+                   asp-route-sortOrder="@ViewData["NameSortParm"]"
+                   asp-route-pageNumber="@Model.PageIndex"
+                   asp-route-currentFilter="@ViewData["CurrentFilter"]">
+                    @Html.DisplayNameFor(model => model.First().Name)
+                </a>
+            </th>
+            <th>@Html.DisplayNameFor(model => model.First().Designation)</th>
+            <th>
+                <a asp-action="Index"
+                   asp-route-sortOrder="@ViewData["EmailSortParm"]"
+                   asp-route-pageNumber="@Model.PageIndex"
+                   asp-route-currentFilter="@ViewData["CurrentFilter"]">
+                    @Html.DisplayNameFor(model => model.First().Email)
+                </a>
+            </th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+
+        @if (Model != null && Model.Any())
+        {
+            // পেজিনেশন অনুযায়ী সিরিয়াল নম্বর গণনা শুরু
+            var x = (Model.PageIndex - 1) * EmployeeController.PageSize + 1;
+
+            @foreach (var employee in Model)
+            {
+                <tr>
+                    <td>@(x++)</td>
+                    <td>@employee.Name</td>
+                    <td>@employee.Designation</td>
+                    <td>@employee.Email</td>
+                    <td>
+                        <a asp-controller="Employee" asp-action="Edit" asp-route-id="@employee.Id" class="btn btn-sm btn-warning">
+                            Edit
+                        </a>
+
+                        @* ডিলিট বাটন: Ajax কল করার জন্য data-id ব্যবহার করা হয়েছে *@
+                        <a href="javascript:void(0)"
+                           class="btn btn-sm btn-danger delete-btn"
+                           data-id="@employee.Id">
+                            Delete
+                        </a>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5" class="text-center">
+                    No data found
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+@* --- পেজিনেশন কন্ট্রোল --- *@
+@{
+    var prevDisabled = !Model.HasPreviousPage ? "disabled" : "";
+    var nextDisabled = !Model.HasNextPage ? "disabled" : "";
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4">
+    <div class="pagination-info">
+        Page @(Model.TotalPages == 0 ? 0 : Model.PageIndex) of @Model.TotalPages
+    </div>
+
+    <div class="pagination-controls">
+        <a asp-action="Index"
+           asp-route-sortOrder="@ViewData["CurrentSort"]"
+           asp-route-pageNumber="@(Model.PageIndex - 1)"
+           asp-route-currentFilter="@ViewData["CurrentFilter"]"
+           class="btn btn-default @prevDisabled">
+            Previous
+        </a>
+        <a asp-action="Index"
+           asp-route-sortOrder="@ViewData["CurrentSort"]"
+           asp-route-pageNumber="@(Model.PageIndex + 1)"
+           asp-route-currentFilter="@ViewData["CurrentFilter"]"
+           class="btn btn-default @nextDisabled">
+            Next
+        </a>
+    </div>
+</div>
+
+
+@* AntiForgeryToken ভিউতে যোগ করা হলো, যাতে জাভাস্ক্রিপ্ট এটি ব্যবহার করতে পারে *@
+@Html.AntiForgeryToken()
+
+@* --- jQuery এবং কাস্টম ডিলিট লজিক যোগ করা হয়েছে --- *@
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+
+            // Anti-Forgery Token মান সংগ্রহ করা
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            // ১. ডিলিট বাটনে ক্লিক ইভেন্ট ধরা
+            $('.delete-btn').on('click', function (e) {
+                e.preventDefault(); // লিঙ্কের ডিফল্ট অ্যাকশন বন্ধ করা
+
+                var employeeId = $(this).data('id');
+
+                // ২. নিশ্চিতকরণ বার্তা দেখানো
+                var confirmation = confirm("Are you sure you want to delete this employee (ID: " + employeeId + ")?");
+
+                if (confirmation) {
+                    // ৩. ইউজার নিশ্চিত করলে Ajax POST রিকোয়েস্ট পাঠানো
+
+                    $.ajax({
+                        url: '@Url.Action("DeleteConfirmed", "Employee")', // কন্ট্রোলার এবং অ্যাকশন
+                        type: 'POST',
+                        data: {
+                            id: employeeId,
+                            __RequestVerificationToken: token // AntiForgeryToken পাস করা
+                        },
+                        success: function (response) {
+                            // সফল হলে পৃষ্ঠাটি রিলোড করা অথবা Index অ্যাকশনে রিডাইরেক্ট করা
+                            window.location.href = '@Url.Action("Index", "Employee")';
+                        },
+                        error: function (xhr, status, error) {
+                            // ত্রুটি হলে
+                            alert("Delete failed: " + xhr.statusText);
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

@@ -1,0 +1,22 @@
+﻿@using System.Security.Claims;
+
+@{
+    ViewData["Title"] = "প্রবেশাধিকার নেই";
+}
+
+<div class="container text-center py-5">
+    <h1 class="display-1 text-danger">403</h1>
+    <h2 class="display-4">প্রবেশাধিকার নিষিদ্ধ (Access Denied)</h2>
+    <p class="lead">
+        দুঃখিত, আপনি এই পৃষ্ঠাটি দেখার জন্য **অনুমোদিত নন**।
+        আপনার বর্তমান ভূমিকা এই রিসোর্স অ্যাক্সেস করার অনুমতি দেয় না।
+    </p>
+    <hr>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-lg">হোম পেজে ফিরে যান</a>
+
+    @if (User.Identity.IsAuthenticated)
+    {
+        // যদি ইউজার লগইন করা থাকে, কিন্তু Admin না হয়, তার ভূমিকা দেখানো যেতে পারে।
+        <p class="mt-3">আপনার বর্তমান ভূমিকা: <strong>@User.FindFirst(ClaimTypes.Role)?.Value</strong></p>
+    }
+</div>
