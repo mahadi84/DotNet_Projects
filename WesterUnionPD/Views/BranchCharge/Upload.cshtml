@@ -1,0 +1,139 @@
+﻿@model List<WesterUnionPD.Models.UploadJob>
+
+<h2>Upload CSV</h2>
+
+<form id="uploadForm" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <input id="fileInput" type="file" name="file" accept=".csv" required />
+    <button id="btnUpload" type="button">Upload & Process</button>
+</form>
+
+<div id="status" style="margin-top:10px;"></div>
+
+<!-- Upload progress bar -->
+<div id="progressWrap" style="margin-top:10px; width:420px; display:none;">
+    <div style="border:1px solid #999;height:22px;">
+        <div id="progressBar" style="height:22px;width:0%;background:#2e7d32;"></div>
+    </div>
+    <div id="progressText">0%</div>
+</div>
+
+<hr />
+
+<h3>Recent Processed Files</h3>
+
+@if (!Model.Any())
+{
+    <p>No previous files.</p>
+}
+else
+{
+    <table border="1" cellpadding="6">
+        <tr>
+            <th>Job ID</th>
+            <th>Status</th>
+            <th>Rows</th>
+            <th>Action</th>
+        </tr>
+
+        @foreach (var job in Model)
+        {
+            <tr>
+                <td>@job.Id</td>
+                <td>@job.Status</td>
+                <td>@job.ProcessedRows</td>
+                <td>
+                    @if (job.Status == "Completed")
+                    {
+                        <a asp-action="Download"
+                           asp-route-id="@job.Id"
+                           style="margin-right:10px;">
+                            📥 Download
+                        </a>
+
+                        <!-- 🔴 Delete single job -->
+                        <form asp-controller="Admin"
+                              asp-action="DeleteJob"
+                              method="post"
+                              style="display:inline;"
+                              onsubmit="return confirm('Delete this job and its data?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="jobId" value="@job.Id" />
+                            <button type="submit"
+                                    style="background:#c62828;color:white;border:none;padding:4px 8px;">
+                                ❌ Delete
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span>Error in your file.</span>
+                    }
+                </td>
+
+            </tr>
+        }
+    </table>
+}
+
+<hr />
+
+<h3 style="color:red;">Danger Zone</h3>
+
+<form asp-controller="Admin"
+      asp-action="DeleteAll"
+      method="post"
+      onsubmit="return confirm('DELETE ALL DATA?');">
+    @Html.AntiForgeryToken()
+    <input type="password" name="password" placeholder="Delete password" required />
+    <button type="submit" style="background:red;color:white;">
+        DELETE ALL DATA
+    </button>
+</form>
+
+<script>
+    /* --- Upload progress JS (same as before) --- */
+    const btn = document.getElementById("btnUpload");
+    const fileInput = document.getElementById("fileInput");
+    const status = document.getElementById("status");
+    const bar = document.getElementById("progressBar");
+    const txt = document.getElementById("progressText");
+    const wrap = document.getElementById("progressWrap");
+    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    btn.onclick = function () {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        wrap.style.display = "block";
+        bar.style.width = "0%";
+        txt.innerText = "0%";
+        status.innerText = "Uploading...";
+
+        const fd = new FormData();
+        fd.append("file", file);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "@Url.Action("UploadAjax", "BranchCharge")", true);
+        xhr.setRequestHeader("RequestVerificationToken", token);
+
+        xhr.upload.onprogress = e => {
+            if (e.lengthComputable) {
+                const p = (e.loaded / e.total) * 100;
+                bar.style.width = p + "%";
+                txt.innerText = Math.round(p) + "%";
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
+                window.location.href = res.redirectUrl;
+            } else {
+                status.innerText = "Upload failed.";
+            }
+        };
+
+        xhr.send(fd);
+    };
+</script>

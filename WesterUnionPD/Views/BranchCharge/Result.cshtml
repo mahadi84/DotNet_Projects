@@ -1,0 +1,133 @@
+﻿@model List<WesterUnionPD.Models.BranchSummary>
+@{
+    var job = ViewBag.Job as WesterUnionPD.Models.UploadJob;
+    ViewData["Title"] = "Processing Result";
+}
+
+<h2>CSV Processing Status</h2>
+
+<div id="statusBox">
+    <p><b>Status:</b> <span id="jobStatus">@job?.Status</span></p>
+    <p><b>Processed Rows:</b> <span id="rowCount">@job?.ProcessedRows</span></p>
+</div>
+
+<!-- Progress indicator -->
+<div id="processingMsg" style="margin-top:10px;">
+    @if (job?.Status != "Completed" && job?.Status != "Failed")
+    {
+
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Processing.......</span>
+        </div>
+        @* <h1 style="color:#0d47a1;" color="primary">
+            Processing in progress............ please wait.
+        </h1> *@
+    }
+</div>
+
+<!-- Result section (hidden until completed) -->
+<div id="resultSection" style="display:@(job?.Status == "Completed" ? "block" : "none"); margin-top:20px;">
+    <a asp-action="Download"
+       asp-route-id="@job!.Id"
+       style="display:inline-block;margin-bottom:10px;">
+        📥 Download Excel
+    </a>
+
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr>
+                <th>ABD Code</th>
+                <th>Charges LOC</th>
+                <th>FX LOC</th>
+                <th>Grand Total</th>
+            </tr>
+        </thead>
+        <tbody id="resultTable">
+            @foreach (var r in Model)
+            {
+                <tr>
+                    <td>@r.AbdCode</td>
+                    <td>@r.ChargesLOC</td>
+                    <td>@r.FxLOC</td>
+                    <td>@r.GrandTotal</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Failed message -->
+@if (job?.Status == "Failed")
+{
+    <p style="color:red;"><b>Processing failed.</b></p>
+}
+
+<hr />
+
+<!-- Go back button -->
+<a asp-action="Upload"
+   style="padding:8px 14px;
+          background:#2e7d32;
+          color:white;
+          text-decoration:none;
+          border-radius:4px;">
+    ⬅ Go Back & Start Fresh
+</a>
+
+<script>
+    (function () {
+
+        const jobId = "@job?.Id";
+        if (!jobId) return;
+
+        const statusEl = document.getElementById("jobStatus");
+        const rowEl = document.getElementById("rowCount");
+        const resultSection = document.getElementById("resultSection");
+        const processingMsg = document.getElementById("processingMsg");
+
+        // If already completed, no polling needed
+        if (statusEl.textContent === "Completed" ||
+            statusEl.textContent === "Failed") {
+            return;
+        }
+
+        // Poll server every 3 seconds
+        const timer = setInterval(async function () {
+            try {
+                const res = await fetch(window.location.href, {
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+
+                if (!res.ok) return;
+
+                const html = await res.text();
+
+                // Parse returned HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+
+                const newStatus = doc.querySelector("#jobStatus")?.textContent;
+                const newRows = doc.querySelector("#rowCount")?.textContent;
+
+                if (newStatus) statusEl.textContent = newStatus;
+                if (newRows) rowEl.textContent = newRows;
+
+                // When completed, stop polling and show result
+                if (newStatus === "Completed") {
+                    clearInterval(timer);
+                    processingMsg.style.display = "none";
+                    resultSection.style.display = "block";
+                }
+
+                // Stop polling on failure
+                if (newStatus === "Failed") {
+                    clearInterval(timer);
+                }
+
+            } catch (e) {
+                // silent fail (network glitch)
+            }
+        }, 3000);
+
+    })();
+</script>

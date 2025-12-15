@@ -1,0 +1,57 @@
+﻿# @RestAPI_HostAddress = http://localhost:5102
+
+# GET {{RestAPI_HostAddress}}/weatherforecast/
+# Accept: application/json
+
+###
+
+
+# ভেরিয়েবল সেটআপ: আপনার অ্যাপ্লিকেশনের URL এখানে সেট করুন
+@host = http://localhost:5102
+@empsRoute = {{host}}/api/Employee
+# @id = 5
+@contentType = application/json
+
+### ১. সকল কর্মচারী পুনরুদ্ধার করুন (GET ALL)
+GET {{empsRoute}} 
+Accept: {{contentType}}
+
+###
+### ২. নতুন কর্মচারী তৈরি করুন (POST)
+# Id এখানে দেওয়া হয়নি, কারণ এটি ডেটাবেস দ্বারা স্বয়ংক্রিয়ভাবে তৈরি হবে।
+POST {{empsRoute}}
+Content-Type: {{contentType}}
+
+{
+    "name": "আব্দুল করিম",
+    "designation": "সিনিয়র ডেভেলপার",
+    "email": "abdul.karim@example.com",
+    "userId": 101
+}
+
+###
+### ৩. নির্দিষ্ট কর্মচারী পুনরুদ্ধার করুন (GET BY ID)
+# উদ্দেশ্য: @id ভেরিয়েবলে সেট করা ID-এর কর্মচারীকে খুঁজে দেখা।
+GET {{empsRoute}}/{{id}}
+Accept: {{contentType}}
+
+###
+### ৪. কর্মচারী ডেটা আপডেট করুন (PUT)
+# উদ্দেশ্য: @id ভেরিয়েবলে সেট করা কর্মচারীর ডেটা পরিবর্তন করা।
+# PUT অনুরোধে Id অবশ্যই JSON বডিতেও অন্তর্ভুক্ত করতে হবে।
+PUT {{empsRoute}}/{{id}}
+Content-Type: {{contentType}}
+
+{
+    "id": {{id}},
+    "name": "আব্দুল করিম আহমেদ",
+    "designation": "টেকনিক্যাল লিড", 
+    "email": "abdul.ahmed@example.com", 
+    "userId": 101 
+}
+
+###
+### ৫. কর্মচারী মুছে ফেলুন (DELETE)
+# উদ্দেশ্য: @id ভেরিয়েবলে সেট করা কর্মচারীর ডেটা ডেটাবেস থেকে মুছে ফেলা।
+DELETE {{empsRoute}}/{{id}}
+Accept: */*
