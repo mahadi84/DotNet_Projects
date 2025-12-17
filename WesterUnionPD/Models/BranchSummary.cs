@@ -6,7 +6,7 @@
 public sealed class BranchSummary
 {
     public int Id { get; set; }
-    public Guid UploadJobId { get; set; }
+    public Guid UploadJobId { get; set; } //Globally Unique Identifier
 
     public string AbdCode { get; set; } = "";
     public decimal ChargesLOC { get; set; }
