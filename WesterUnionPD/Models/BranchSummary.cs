@@ -3,7 +3,7 @@
 /// <summary>
 /// Aggregated result per ABD branch.
 /// </summary>
-public sealed class BranchSummary
+public sealed class BranchSummary   //sealed কিওয়ার্ডটি ব্যবহার করা হয়, এই ক্লাসটিকে অন্য কেউ Inherit করতে পারবে না।
 {
     public int Id { get; set; }
     public Guid UploadJobId { get; set; } //Globally Unique Identifier
