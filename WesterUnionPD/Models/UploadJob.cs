@@ -7,7 +7,7 @@ public sealed class UploadJob
 {
     public Guid Id { get; set; }
     public string Status { get; set; } = "Queued";
-    public string? Error { get; set; }
+    public string? Error { get; set; }   // ?=এতে কোনো ভ্যালু না-ও থাকতে পারে।
 
     public long ProcessedRows { get; set; }
 
