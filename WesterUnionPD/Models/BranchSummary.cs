@@ -14,3 +14,13 @@ public sealed class BranchSummary
 
     public decimal GrandTotal => ChargesLOC + FxLOC;
 }
+
+
+/// Guid: এটি একটি ডেটা টাইপ (Globally Unique Identifier)। 
+/// এটি সাধারণ int (১, ২, ৩...) আইডির বদলে একটি লম্বা ইউনিক স্ট্রিং তৈরি করে (যেমন: 550e8400-e29b-41d4-a716-446655440000)। 
+/// এটি অত্যন্ত নিরাপদ এবং বড় সিস্টেমে ডুপ্লিকেট আইডি হওয়ার ঝুঁকি থাকে না।
+
+
+
+
+.
