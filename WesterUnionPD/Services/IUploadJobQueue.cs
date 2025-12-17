@@ -2,8 +2,8 @@
 
 public interface IUploadJobQueue
 {
-    ValueTask EnqueueAsync(Guid jobId, string path, CancellationToken ct);
-    ValueTask<(Guid jobId, string path)> DequeueAsync(CancellationToken ct);
+    ValueTask EnqueueAsync(Guid jobId, string path, CancellationToken ct);  // টোকেন নেওয়া এবং লাইনে দাঁড়ানো হলো `Enqueue`।
+    ValueTask<(Guid jobId, string path)> DequeueAsync(CancellationToken ct); // ব্যাংক অফিসার যখন "পরবর্তী গ্রাহক আসুন" বলে সিরিয়াল ডাকেন, তখন লাইন থেকে একজনকে সরিয়ে ডেস্কে নেওয়া হলো `Dequeue`।
 }
 
 
@@ -36,12 +36,6 @@ public interface IUploadJobQueue
 //#### `ValueTask<(Guid jobId, string path)> DequeueAsync(CancellationToken ct);`
 // কাজ: ব্যাকগ্রাউন্ড সার্ভিস যখন কাজ করার জন্য প্রস্তুত হবে, তখন সে এই মেথড কল করে লাইনের একদম সামনে থাকা কাজটি তুলে নেবে।
 // রিটার্ন টাইপ: এটি একটি Tuple ফেরত দেয় যার মধ্যে `jobId` এবং `path` থাকে, যাতে সার্ভিসটি জানে তাকে কোন ফাইলটি নিয়ে কাজ করতে হবে।
-//
-//### ৩. বাস্তব উদাহরণ (Real-life Analogy)
-//ব্যাংকে যখন গ্রাহকরা আসেন, তখন তারা একটি সিরিয়াল টোকেন নিয়ে লাইনে দাঁড়ান।
-// টোকেন নেওয়া এবং লাইনে দাঁড়ানো হলো `Enqueue`।
-// ব্যাংক অফিসার যখন "পরবর্তী গ্রাহক আসুন" বলে সিরিয়াল ডাকেন, তখন লাইন থেকে একজনকে সরিয়ে ডেস্কে নেওয়া হলো `Dequeue`।
-
 
 
 
