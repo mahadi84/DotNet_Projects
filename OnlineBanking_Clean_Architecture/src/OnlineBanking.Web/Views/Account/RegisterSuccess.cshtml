@@ -1,0 +1,14 @@
+﻿@{
+    ViewData["Title"] = "Success";
+}
+ <!-- page title -->
+<div class="alert alert-success">
+    <h4>Registration Successful</h4>
+
+    <!-- Account number ViewBag থেকে show (TempData হয়ে এসেছে) -->
+    <p>Your 5-digit Account Number: <b>@ViewBag.AccountNumber</b></p>
+    <p>Use this account number to login.</p>
+</div>
+
+<!-- Login page link -->
+<a class="btn btn-dark" href="/Account/Login">Go to Login</a>

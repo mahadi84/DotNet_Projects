@@ -1,0 +1,109 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+
+    // ViewBag.Profile থেকে strongly-typed tuple cast করা হচ্ছে
+    var profile = ((string CustomerName, string AccountNumber, decimal Balance))ViewBag.Profile;
+
+    // rules object (BankingRulesOptions) viewbag থেকে নেওয়া
+    var rules = ViewBag.Rules;
+
+    // last10 list (transactions) dynamic হিসেবে নেওয়া
+    var last10 = (IEnumerable<dynamic>)ViewBag.Last10;
+}
+
+<!-- Welcome message -->
+<h3>Welcome, @profile.CustomerName</h3>
+
+<div class="row">
+
+    <!-- Left panel: account summary -->
+    <div class="col-md-6">
+        <div class="card card-body">
+            <p><b>Account:</b> @profile.AccountNumber</p>
+
+            <!-- balance show with currency symbol -->
+            <p><b>Balance:</b> @rules.CurrencySymbol@profile.Balance</p>
+
+            <!-- rules summary -->
+            <p class="text-muted mb-0">
+                Min Balance: @rules.CurrencySymbol@rules.MinimumBalance |
+                Daily Transfer Limit: @rules.CurrencySymbol@rules.DailyTransferLimit |
+                TZ: @rules.TimeZoneId
+            </p>
+
+            <!-- PDF download link -->
+            <a class="btn btn-outline-dark mt-3" href="/Banking/MiniStatementPdf">
+                Download Mini Statement (PDF)
+            </a>
+        </div>
+    </div>
+
+    <!-- Right panel: actions forms -->
+    <div class="col-md-6">
+        <div class="card card-body">
+
+            <!-- Deposit form -->
+            <h5>Deposit</h5>
+            <form method="post" action="/Banking/Deposit" class="d-flex gap-2">
+                @Html.AntiForgeryToken()
+                <!-- name="Amount" controller parameter binding এর জন্য -->
+                <input class="form-control" name="Amount" placeholder="Amount" />
+                <button class="btn btn-success" type="submit">Deposit</button>
+            </form>
+
+            <!-- Withdraw form -->
+            <h5 class="mt-4">Withdraw</h5>
+            <form method="post" action="/Banking/Withdraw" class="d-flex gap-2">
+                @Html.AntiForgeryToken()
+                <input class="form-control" name="Amount" placeholder="Amount" />
+                <button class="btn btn-warning" type="submit">Withdraw</button>
+            </form>
+
+            <!-- Transfer form -->
+            <h5 class="mt-4">Transfer</h5>
+            <form method="post" action="/Banking/Transfer" class="row g-2">
+                @Html.AntiForgeryToken()
+                <div class="col-6">
+                    <input class="form-control" name="ToAccountNumber" placeholder="To (5-digit)" />
+                </div>
+                <div class="col-6">
+                    <input class="form-control" name="Amount" placeholder="Amount" />
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary w-100" type="submit">Transfer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Transactions table -->
+<div class="card card-body mt-4">
+    <h5>Last 10 Transactions (UTC stored; PDF shows Dhaka time)</h5>
+
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>UTC Time</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Balance After</th>
+                <th>Reference</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <!-- last10 loop করে rows print -->
+            @foreach (var t in last10)
+            {
+                <tr>
+                    <td>@t.CreatedAtUtc</td>
+                    <td>@t.Type</td>
+                    <td>@rules.CurrencySymbol@t.Amount</td>
+                    <td>@rules.CurrencySymbol@t.BalanceAfter</td>
+                    <td>@t.Reference</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

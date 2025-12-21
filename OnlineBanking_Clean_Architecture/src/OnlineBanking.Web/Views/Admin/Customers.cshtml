@@ -1,0 +1,66 @@
+﻿@model IEnumerable<OnlineBanking.Domain.Entities.Customer>
+@{
+    ViewData["Title"] = "Admin - Customers";
+}
+
+<h3>Customers</h3>
+
+<!-- Customers list table -->
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Acc</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>City</th>
+            <th>Admin</th>
+            <th>LockedUntil(UTC)</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        <!-- Model list loop -->
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.AccountNumber</td>
+                <td>@c.Name</td>
+                <td>@c.Email</td>
+                <td>@c.City</td>
+                <td>@c.IsAdmin</td>
+                <td>@c.LockedUntilUtc</td>
+
+                <td>
+                    <!-- Toggle admin role form -->
+                    <form method="post" action="/Admin/SetAdmin" class="d-inline">
+                        <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+                        <!-- isAdmin toggle: true হলে false হবে, false হলে true হবে -->
+                        <input type="hidden" name="isAdmin" value="@(c.IsAdmin ? "false" : "true")" />
+                        <button class="btn btn-sm btn-outline-primary" type="submit">
+                            @(c.IsAdmin ? "Remove Admin" : "Make Admin")
+                        </button>
+                    </form>
+
+                    <!-- Lock 30 minutes -->
+                    <form method="post" action="/Admin/Lock" class="d-inline">
+                        <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+                        <input type="hidden" name="minutes" value="30" />
+                        <button class="btn btn-sm btn-outline-warning" type="submit">Lock 30m</button>
+                    </form>
+
+                    <!-- Unlock -->
+                    <form method="post" action="/Admin/Unlock" class="d-inline">
+                        <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+                        <button class="btn btn-sm btn-outline-success" type="submit">Unlock</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Reset password page link -->
+<a class="btn btn-dark" href="/Admin/ResetPassword">Reset User Password</a>
+
+
