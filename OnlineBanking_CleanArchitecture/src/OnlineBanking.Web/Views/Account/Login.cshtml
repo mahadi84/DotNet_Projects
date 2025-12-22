@@ -1,0 +1,30 @@
+﻿@model OnlineBanking.Web.Models.LoginVm
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <h3>Login</h3>
+
+        <!-- form POST হবে Account/Login এ -->
+        <form method="post" class="card card-body">
+            <!-- validation summary -->
+            <div asp-validation-summary="All" class="text-danger"></div>
+
+            <!-- AccountNumber input -->
+            <label class="form-label">Account Number</label>
+            <input class="form-control" asp-for="AccountNumber" />
+
+            <!-- Password input -->
+            <label class="form-label mt-2">Password</label>
+            <input class="form-control" asp-for="Password" type="password" />
+
+            <!-- submit -->
+            <button class="btn btn-primary mt-3" type="submit">Login</button>
+
+            <!-- register link -->
+            <a class="btn btn-link mt-2" href="/Account/Register">Create account</a>
+        </form>
+    </div>
+</div>
