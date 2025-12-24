@@ -34,6 +34,7 @@
                 <td>
                     <!-- Toggle admin role form -->
                     <form method="post" action="/Admin/SetAdmin" class="d-inline">
+                        @Html.AntiForgeryToken()
                         <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
                         <!-- isAdmin toggle: true হলে false হবে, false হলে true হবে -->
                         <input type="hidden" name="isAdmin" value="@(c.IsAdmin ? "false" : "true")" />
@@ -44,6 +45,7 @@
 
                     <!-- Lock 30 minutes -->
                     <form method="post" action="/Admin/Lock" class="d-inline">
+                        @Html.AntiForgeryToken()
                         <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
                         <input type="hidden" name="minutes" value="30" />
                         <button class="btn btn-sm btn-outline-warning" type="submit">Lock 30m</button>
@@ -51,6 +53,7 @@
 
                     <!-- Unlock -->
                     <form method="post" action="/Admin/Unlock" class="d-inline">
+                        @Html.AntiForgeryToken()
                         <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
                         <button class="btn btn-sm btn-outline-success" type="submit">Unlock</button>
                     </form>
