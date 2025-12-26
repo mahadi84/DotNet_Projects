@@ -6,6 +6,7 @@ This projects include:
 -Search Field
 -Pagination
 
+Used Technology: ASP.NET core mvc --version
 
 Run migrations:
    - Tools -> NuGet Package Manager -> Package Manager Console
