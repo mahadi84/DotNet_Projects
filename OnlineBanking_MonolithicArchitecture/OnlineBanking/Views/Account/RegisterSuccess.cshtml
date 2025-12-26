@@ -1,0 +1,9 @@
+@{ ViewData["Title"] = "Success"; }
+
+<div class="alert alert-success">
+  <h4>Registration Successful</h4>
+  <p>Your 5-digit Account Number: <b>@ViewBag.AccountNumber</b></p>
+  <p>Use this account number to login.</p>
+</div>
+
+<a class="btn btn-dark" asp-controller="Account" asp-action="Login">Go to Login</a>

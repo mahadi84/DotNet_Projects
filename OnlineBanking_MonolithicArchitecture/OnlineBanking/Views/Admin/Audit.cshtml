@@ -1,0 +1,26 @@
+@using OnlineBanking.Entities
+@model IEnumerable<AuditLog>
+@{ ViewData["Title"] = "Admin - Audit Logs"; }
+
+<h3>Audit Logs (Latest)</h3>
+
+<table class="table table-sm table-striped">
+  <thead>
+    <tr>
+      <th>UTC</th><th>Action</th><th>Actor</th><th>Target</th><th>IP</th><th>Message</th>
+    </tr>
+  </thead>
+  <tbody>
+  @foreach (var a in Model)
+  {
+    <tr>
+      <td>@a.CreatedAtUtc</td>
+      <td>@a.Action</td>
+      <td>@a.ActorAccountNumber</td>
+      <td>@a.TargetAccountNumber</td>
+      <td>@a.Ip</td>
+      <td>@a.Message</td>
+    </tr>
+  }
+  </tbody>
+</table>

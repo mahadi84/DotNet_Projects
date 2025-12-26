@@ -1,8 +1,35 @@
-### ## Clean Architecture
-    * Domain (Entities only)
-    * Application (Interfaces + Rules)
-    * Infrastructure (DB, PDF, Security)
-    * Web (MVC + UI)
+
+
+
+OnlineBankingMono (.NET 9 / ASP.NET Core MVC)
+
+Used Monolithic Architecture
+
+Requirements:
+- Visual Studio 2022 with .NET 9 SDK installed (or .NET 9 SDK via Visual Studio Installer)
+- MySQL running locally
+
+Setup:
+1) Open OnlineBankingMono.sln in Visual Studio 2022
+2) Edit OnlineBanking/appsettings.json -> set MySQL password
+3) Create DB in MySQL:
+   CREATE DATABASE onlinebanking_db;
+
+4) Restore NuGet packages (VS does automatically on build)
+   NOTE: This project targets net9.0 and references EF Core 9.0.0 + Pomelo 9.0.0 +EF core tools.
+   If your NuGet sources don't have these yet, you can change the versions in OnlineBanking.csproj
+   to whatever 9.0.* versions are available for you.
+
+5) Run migrations:
+   - Tools -> NuGet Package Manager -> Package Manager Console
+   - Select Default project: OnlineBanking
+   - Run:
+       Add-Migration InitialCreate
+       Update-Database
+
+
+
+Functionalities:
 
 
 ## Customer Registration
@@ -32,7 +59,6 @@
 
 ## Audit Logs (Real Banking Feature)
    -Every sensitive action record 
-
 
 
 ## Admin Functionalities:
@@ -75,8 +101,18 @@
    * Asia/Dhaka time conversion
    * Currency symbol configurable (৳ / € / $)
 
-> ⚠️ Note: It is production-ready starter। 
+> Note: It is production-ready starter। 
 For live it require MFA/OTP, KYC/AML, device fingerprinting, fraud scoring, WAF, HSM, key rotation.
 
----Muhammad Mahadi Hasan
+
+
+
+Muhammad Mahadi Hasan
 Mob: 01616829529
+
+
+
+
+
+
+.

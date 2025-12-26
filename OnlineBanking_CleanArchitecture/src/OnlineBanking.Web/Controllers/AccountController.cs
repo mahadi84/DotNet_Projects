@@ -14,6 +14,10 @@ namespace OnlineBanking.Web.Controllers
         // DI দিয়ে IAuthService inject করা হচ্ছে
         public AccountController(IAuthService auth) => _auth = auth;
 
+        
+        
+        
+        
         // Client IP + UserAgent collect করে
         // audit log এ trace রাখতে কাজে লাগে
         private (string ip, string ua) ClientInfo()
@@ -22,6 +26,11 @@ namespace OnlineBanking.Web.Controllers
             var ua = Request.Headers.UserAgent.ToString();                            // browser/device info
             return (ip, ua);                                                          // tuple return
         }
+
+
+
+
+
 
         // Register page দেখায়
         [HttpGet]
@@ -64,12 +73,24 @@ namespace OnlineBanking.Web.Controllers
             return View();
         }
 
+
+
+
+
+
+
+
+
         // Login page show
         [HttpGet]
         public IActionResult Login() => View(new LoginVm()); // empty login model
 
+        
+        
+        
         // Login submit handle
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginVm vm)
         {
             // validation fail হলে same page show
@@ -115,8 +136,23 @@ namespace OnlineBanking.Web.Controllers
             return RedirectToAction("Dashboard", "Banking");
         }
 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         // Logout handle (POST রাখা ভালো practice; CSRF protection লাগে)
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             // cookie invalidate/sign-out

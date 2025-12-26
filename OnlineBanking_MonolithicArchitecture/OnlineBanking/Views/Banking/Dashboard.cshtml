@@ -1,0 +1,72 @@
+@using OnlineBanking.Entities
+@{
+  ViewData["Title"] = "Dashboard";
+  var profile = ((string CustomerName, string AccountNumber, decimal Balance))ViewBag.Profile;
+  var rules = ViewBag.Rules;
+  var last10 = (IEnumerable<Transaction>)ViewBag.Last10;
+}
+
+<h3>Welcome, @profile.CustomerName</h3>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-body">
+      <p><b>Account:</b> @profile.AccountNumber</p>
+      <p><b>Balance:</b> @rules.CurrencySymbol@profile.Balance</p>
+      <p class="text-muted mb-0">
+        Min Balance: @rules.CurrencySymbol@rules.MinimumBalance |
+        Daily Transfer Limit: @rules.CurrencySymbol@rules.DailyTransferLimit |
+        TZ: @rules.TimeZoneId
+      </p>
+      <a class="btn btn-outline-dark mt-3" asp-controller="Banking" asp-action="MiniStatementPdf">
+        Download Mini Statement (PDF)
+      </a>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card card-body">
+      <h5>Deposit</h5>
+      <form method="post" asp-controller="Banking" asp-action="Deposit" class="d-flex gap-2">
+        <input class="form-control" name="Amount" placeholder="Amount" />
+        <button class="btn btn-success" type="submit">Deposit</button>
+      </form>
+
+      <h5 class="mt-4">Withdraw</h5>
+      <form method="post" asp-controller="Banking" asp-action="Withdraw" class="d-flex gap-2">
+        <input class="form-control" name="Amount" placeholder="Amount" />
+        <button class="btn btn-warning" type="submit">Withdraw</button>
+      </form>
+
+      <h5 class="mt-4">Transfer</h5>
+      <form method="post" asp-controller="Banking" asp-action="Transfer" class="row g-2">
+        <div class="col-6"><input class="form-control" name="ToAccountNumber" placeholder="To (5-digit)" /></div>
+        <div class="col-6"><input class="form-control" name="Amount" placeholder="Amount" /></div>
+        <div class="col-12"><button class="btn btn-primary w-100" type="submit">Transfer</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card card-body mt-4">
+  <h5>Last 10 Transactions (UTC stored; PDF shows Dhaka time)</h5>
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <th>UTC Time</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Reference</th>
+      </tr>
+    </thead>
+    <tbody>
+    @foreach (var t in last10)
+    {
+      <tr>
+        <td>@t.CreatedAtUtc</td>
+        <td>@t.Type</td>
+        <td>@rules.CurrencySymbol@t.Amount</td>
+        <td>@rules.CurrencySymbol@t.BalanceAfter</td>
+        <td>@t.Reference</td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>

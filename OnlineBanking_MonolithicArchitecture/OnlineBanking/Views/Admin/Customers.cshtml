@@ -1,0 +1,48 @@
+@using OnlineBanking.Entities
+@model IEnumerable<Customer>
+@{ ViewData["Title"] = "Admin - Customers"; }
+
+<h3>Customers</h3>
+
+<table class="table table-sm table-striped">
+  <thead>
+    <tr>
+      <th>Acc</th><th>Name</th><th>Email</th><th>City</th><th>Admin</th><th>LockedUntil(UTC)</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+  @foreach (var c in Model)
+  {
+    <tr>
+      <td>@c.AccountNumber</td>
+      <td>@c.Name</td>
+      <td>@c.Email</td>
+      <td>@c.City</td>
+      <td>@c.IsAdmin</td>
+      <td>@c.LockedUntilUtc</td>
+      <td>
+        <form method="post" asp-controller="Admin" asp-action="SetAdmin" class="d-inline">
+          <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+          <input type="hidden" name="isAdmin" value="@(c.IsAdmin ? "false" : "true")" />
+          <button class="btn btn-sm btn-outline-primary" type="submit">
+            @(c.IsAdmin ? "Remove Admin" : "Make Admin")
+          </button>
+        </form>
+
+        <form method="post" asp-controller="Admin" asp-action="Lock" class="d-inline">
+          <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+          <input type="hidden" name="minutes" value="30" />
+          <button class="btn btn-sm btn-outline-warning" type="submit">Lock 30m</button>
+        </form>
+
+        <form method="post" asp-controller="Admin" asp-action="Unlock" class="d-inline">
+          <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+          <button class="btn btn-sm btn-outline-success" type="submit">Unlock</button>
+        </form>
+      </td>
+    </tr>
+  }
+  </tbody>
+</table>
+
+<a class="btn btn-dark" asp-controller="Admin" asp-action="ResetPassword">Reset User Password</a>
