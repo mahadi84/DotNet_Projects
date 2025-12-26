@@ -108,7 +108,8 @@ For live it require MFA/OTP, KYC/AML, device fingerprinting, fraud scoring, WAF,
 
 
 Muhammad Mahadi Hasan
-Mob: 01616829529
+Mob: 01616-829529
+Email: mahadi.engr@gmail.com
 
 
 

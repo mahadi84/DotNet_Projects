@@ -1,7 +1,0 @@
-This projects include:
-
--User Authorization
--User Authentication
--Complete CRUD
--Search Field
--Pagination

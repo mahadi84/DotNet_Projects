@@ -22,12 +22,16 @@ Setup:
    If your NuGet sources don't have these yet, you can change the versions in OnlineBanking.csproj
    to whatever 9.0.* versions are available for you.
 
-5) Run migrations:
-   - Tools -> NuGet Package Manager -> Package Manager Console
-   - Select Default project: OnlineBanking
-   - Run:
-       Add-Migration InitialCreate
-       Update-Database
+5) Database Migration (MySQL)
+
+## 5.1 Create database
+CREATE DATABASE onlinebanking_db;
+
+## 5.2 EF migration + update
+cd OnlineBanking
+dotnet ef migrations add InitialCreate -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web  
+dotnet ef database update -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+
 
 
 Functionalities:
@@ -108,6 +112,7 @@ For live it require MFA/OTP, KYC/AML, device fingerprinting, fraud scoring, WAF,
 
 
 Muhammad Mahadi Hasan
-Mob: 01616829529
+Mob: 01616-829529
+Email: mahadi.engr@gmail.com
 
 
