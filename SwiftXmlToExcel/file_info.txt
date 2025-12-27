@@ -1,0 +1,7 @@
+<pacs:FinInstnId><pacs:BICFI>
+<pacs:CdtTrfTxInf><pacs:PmtId><pacs:InstrId>
+<pacs:InstdAmt Ccy="USD">
+<pacs:Dbtr><pacs:Nm>
+<pacs:Cdtr><pacs:Nm>
+<pacs:CdtrAcct><pacs:Id>
+<pacs:RmtInf><pacs:Ustrd>

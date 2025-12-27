@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - XmlToExcelApp</title>
+    <link href="~/css/site.css" rel="stylesheet" />
+</head>
+<body>
+    <header>
+        <h1>XmlToExcelApp</h1>
+        <nav>
+            <ul>
+                <li><a href="@Url.Action("Index", "Home")">Home</a></li>
+                <li><a href="@Url.Action("Upload", "Transaction")">Upload XML</a></li>
+                <li><a href="@Url.Action("DownloadList", "Transaction")">DownloadList</a></li>
+                @* <li><a href="@Url.Action("DownloadBatch", "Transaction")">Download Excel</a></li> *@
+            </ul>
+        </nav>
+    </header>
+    <main role="main" class="container">
+        @RenderBody()
+    </main>
+</body>
+</html>
