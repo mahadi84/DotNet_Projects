@@ -23,13 +23,13 @@ This application is designed to process ISO 20022 (pacs.008) XML files or text f
 
 The controller extracts the following fields using LINQ to XML:
 
-<pacs:FinInstnId><pacs:BICFI>
-<pacs:CdtTrfTxInf><pacs:PmtId><pacs:InstrId>
-<pacs:InstdAmt Ccy="USD">
-<pacs:Dbtr><pacs:Nm>
-<pacs:Cdtr><pacs:Nm>
-<pacs:CdtrAcct><pacs:Id>
-<pacs:RmtInf><pacs:Ustrd>
+<pacs:FinInstnId><pacs:BICFI> 
+<pacs:CdtTrfTxInf><pacs:PmtId><pacs:InstrId> 
+<pacs:InstdAmt Ccy="USD"> 
+<pacs:Dbtr><pacs:Nm> 
+<pacs:Cdtr><pacs:Nm> 
+<pacs:CdtrAcct><pacs:Id> 
+<pacs:RmtInf><pacs:Ustrd> 
 
 - Batch Tracking: Generates a unique `BATCH-XXXX` ID for every upload.
 - Header Info: Captures the Creation Date/Time (`CreDtTm`).
@@ -84,9 +84,14 @@ The controller extracts the following fields using LINQ to XML:
 
 ## Developer
 
-Developed by: Muhammad Mahadi Hasan Year: 2025
+Developed by: Muhammad Mahadi Hasan 
+Year: 2025
 
 
+
+
+
+.
 
 
 
