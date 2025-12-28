@@ -5,3 +5,4 @@
 <pacs:Cdtr><pacs:Nm>
 <pacs:CdtrAcct><pacs:Id>
 <pacs:RmtInf><pacs:Ustrd>
+<pacs:IntrBkSttlmDt>

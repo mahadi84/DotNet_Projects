@@ -1,0 +1,31 @@
+
+@{
+    ViewData["Title"] = "Upload XML File";
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Upload XML File</h4>
+        </div>
+        <div class="card-body d-flex flex-column justify-content-center align-items-center" style="min-height: 200px;">
+
+            @if (ViewBag.ErrorMessage != null)
+            {
+                <div class="alert alert-danger w-100 text-center" role="alert">
+                    @ViewBag.ErrorMessage
+                </div>
+            }
+            <form asp-controller="Transaction" asp-action="Upload" method="post" enctype="multipart/form-data" class="text-center">
+                <div class="mb-3">
+                    <input type="file" name="file" class="form-control" accept=".txt"  />
+                    @if (ViewBag.ErrorMessage != null)
+                    {
+                        <span class="text-danger d-block mt-2">Please select a .xml or .txt file.</span>
+                    }
+                </div>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+        </div>
+    </div>
+</div>
