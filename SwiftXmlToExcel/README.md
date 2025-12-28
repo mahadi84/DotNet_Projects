@@ -21,7 +21,7 @@ This application is designed to process ISO 20022 (pacs.008) XML files or text f
 
 ### 2. Data Extraction (ISO 20022)
 
-The controller extracts the following fields using LINQ(Language Integrated Query-is special SQL by Microsoft) to XML:
+The controller extracts the following fields using LINQ(Language Integrated Query-is special SQL by Microsoft for .net C#) to XML:
 
 <pacs:FinInstnId><pacs:BICFI> 
 <pacs:CdtTrfTxInf><pacs:PmtId><pacs:InstrId> 
