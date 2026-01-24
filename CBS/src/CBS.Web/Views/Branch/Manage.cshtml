@@ -1,0 +1,87 @@
+﻿@model CBS.Application.DTO.BranchUpdateDTO
+
+<div class="container mt-4">
+    <div class="card border-primary mb-4 shadow-sm">
+        <div class="card-body bg-light">
+            <form method="get" asp-action="Manage" class="row g-3">
+                <div class="col-md-9">
+                    @* type="text" allows users to input leading zeros comfortably *@
+                    <input type="text" name="searchCode" class="form-control form-control-lg"
+                           placeholder="Enter Branch Code (e.g. 0012, 1005)" />
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Search Branch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null || ViewBag.Error != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @(TempData["Error"] ?? ViewBag.Error)
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model != null)
+    {
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0">Edit Branch: @Model.BranchName</h5>
+            </div>
+            <div class="card-body p-4">
+
+
+                <form asp-action="Update" method="post">
+                    @Html.AntiForgeryToken()
+
+                    @* Hidden fields required for identifying the record and handling concurrency *@
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="RowVersion" />
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label asp-for="BranchName" class="form-label fw-bold">Branch Name</label>
+                            <input asp-for="BranchName" class="form-control" />
+                            <span asp-validation-for="BranchName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="BranchCode" class="form-label fw-bold">Branch Code</label>
+                            <input asp-for="BranchCode" type="text" class="form-control" />
+                            <span asp-validation-for="BranchCode" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="VaultBalance" class="form-label fw-bold">Vault Balance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input asp-for="VaultBalance" class="form-control" />
+                            </div>
+                            <span asp-validation-for="VaultBalance" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 border-top pt-3 text-end">
+                        <a asp-action="Manage" class="btn btn-outline-secondary px-4 me-2">Cancel</a>
+                        <button type="submit" class="btn btn-success px-5">Save Changes</button>
+                    </div>
+                </form>
+
+
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
