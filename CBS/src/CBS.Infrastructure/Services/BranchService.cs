@@ -2,7 +2,6 @@
 using CBS.Application.DTO;
 using CBS.Application.Interfaces;
 using CBS.Domain.Common;
-using CBS.Domain.Entities;
 using Dapper;
 using Microsoft.VisualBasic;
 using MySqlConnector;
@@ -36,89 +35,103 @@ public class BranchService : IBranchService
 
 
 
-
-
-    public async Task<Result<dynamic>> CreateBranchAsync(BranchCreateDTO bcdto, int UserID)
+    public async Task<Result<BranchResponseDTO>> CreateBranchAsync(BranchCreateDTO bcdto, int UserID)
     {
         using var connection = await _dataSource.OpenConnectionAsync();
-        using var transaction = await connection.BeginTransactionAsync(); // Banking transaction start
+        using var transaction = await connection.BeginTransactionAsync();
 
         try
         {
-            // 1. duplicate check
+            // 1. Duplicate Branch Check
             const string checkSql = "SELECT COUNT(1) FROM branches WHERE branch_code = @BranchCode;";
             var countBranchCode = await connection.ExecuteScalarAsync<int>(checkSql, new { bcdto.BranchCode }, transaction);
 
             if (countBranchCode > 0)
             {
-                return Result<dynamic>.Failure("Branch code already exists.");
+                return Result<BranchResponseDTO>.Failure("Branch code already exists.");
             }
 
-            // 2. data insert 
-            const string insertSql = @"
-                INSERT INTO branches (branch_code, branch_name, vault_balance, created_by, updated_by, approved_by, row_version, is_active) 
-                VALUES (@BranchCode, @BranchName, @VaultBalance, @CreatedBy, @UpdatedBy, @ApprovedBy, @RowVersion, @IsActive);
-                SELECT LAST_INSERT_ID();";
+            // 2. Domain Entity Creation & Business Logic Validation
+            // Using the static factory method to ensure all business rules (e.g., Min Balance 500) are met.
+            Branch newBranch;
+            try
+            {
+                newBranch = Branch.Create(bcdto.BranchCode, bcdto.BranchName, bcdto.VaultBalance, UserID);
+            }
+            catch (Exception ex)
+            {
+                // Catch validation errors thrown by the Domain Entity
+                return Result<BranchResponseDTO>.Failure(ex.Message);
+            }
 
+            // 3. Data Insertion using Entity Properties
+            const string insertSql = @"
+            INSERT INTO branches (branch_code, branch_name, vault_balance, created_by, row_version, is_active, created_at) 
+            VALUES (@BranchCode, @BranchName, @VaultBalance, @CreatedBy, @RowVersion, @IsActive, @CreatedAt);
+            SELECT LAST_INSERT_ID();";
+
+            // Map parameters directly from the validated Entity object
             var insertParameters = new
             {
-                bcdto.BranchCode,  // ✅ First parameter should match column order
-                bcdto.BranchName,
-                bcdto.VaultBalance,
-                CreatedBy = UserID,     // ✅ UserID from method parameter
-                UpdatedBy = (int?)null,    // ✅ Use 0 or NULL as needed
-                ApprovedBy = (int?)null,   // ✅ Use 0 or NULL as needed
-                RowVersion = 1,
-                IsActive = true
+                newBranch.BranchCode,
+                newBranch.BranchName,
+                newBranch.VaultBalance,
+                newBranch.CreatedBy,
+                newBranch.RowVersion,
+                newBranch.IsActive,
+                newBranch.CreatedAt
             };
 
             var newId = await connection.ExecuteScalarAsync<int>(insertSql, insertParameters, transaction);
 
             if (newId <= 0)
             {
-                await transaction.RollbackAsync(); //RollBack, If Branch data not saved
-                return Result<dynamic>.Failure("Failed! Branch data not saved.");
+                await transaction.RollbackAsync();
+                return Result<BranchResponseDTO>.Failure("Failed! Branch data not saved.");
             }
 
-            // 3. audit log create(new data save so OldValue=null) 
+            // 4. Audit Log Creation
+            // Recording the 'CREATE' action with final validated values
             var auditDto = new AuditLogCreateDTO(
-                BranchCode: bcdto.BranchCode,
+                BranchCode: newBranch.BranchCode,
                 CreatedBy: UserID,
-                UpdatedBy: (int?)null,
-                ApprovedBy: (int?)null,
+                UpdatedBy: null,
+                ApprovedBy: null,
                 TableName: "branches",
                 Action: "CREATE",
                 OldValue: "-",
-                NewValue: $"{bcdto.VaultBalance}",
-                Description: "New Branch Created"
+                NewValue: $"Name: {newBranch.BranchName}, Vault Balance: {newBranch.VaultBalance}",
+                Description: "New Branch created"
             );
 
             var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
 
             if (!auditResult.IsSuccess)
             {
-                await transaction.RollbackAsync(); //RollBack, If failed to create Audit Log  
-                return Result<dynamic>.Failure("Audit log failed. Transaction rolled back.");
+                // Rollback the entire transaction if the audit log fails
+                await transaction.RollbackAsync();
+                return Result<BranchResponseDTO>.Failure("Audit log failed. Transaction rolled back.");
             }
 
-            // 4. commit transaciton, if everything is ok
+            // 5. Commit Transaction
+            // Finalizing the changes in the database
             await transaction.CommitAsync();
 
-            // 5. get response 
-            const string selectSql = "SELECT branch_name, branch_code, row_version FROM branches WHERE id = @Id;";
-            var createdData = await connection.QuerySingleOrDefaultAsync<dynamic>(selectSql, new { Id = newId });
-
-            return Result<dynamic>.Success(createdData, "Branch Created Successfully with Audit Log.");
+            // 6. Return Response Data for the UI
+            var response= new BranchResponseDTO(
+                Id :newId,
+                BranchName: newBranch.BranchName,
+                BranchCode: newBranch.BranchCode,
+                VaultBalance: newBranch.VaultBalance);
+            return Result<BranchResponseDTO>.Success( response, "Branch created successfully.");
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync(); //RollBack, if data is not saved properly
-            return Result<dynamic>.Failure("Database Error: " + ex.Message);
+            // Rollback on any unexpected database or system error
+            await transaction.RollbackAsync();
+            return Result<BranchResponseDTO>.Failure("Database Error: " + ex.Message);
         }
     }
-
-
-
 
 
 
@@ -135,30 +148,21 @@ public class BranchService : IBranchService
         try
         {
 
-            //var branch = await conn.QueryFirstOrDefaultAsync<dynamic>(sql, branchCode);
-            //if (branch == null) return Result<dynamic>.Failure("Branch not found");
-            //return Result<dynamic>.Success(branch, "Branch found");
-
-
-            //const string sql = @"SELECT id, branch_code, branch_name, vault_balance, row_version 
-            //                     FROM branches WHERE branch_code = @BranchCode AND is_active = TRUE";
-
-            const string sql = @"SELECT 
+           const string sql = @"SELECT 
                         id AS Id, 
                         branch_code AS BranchCode, 
                         branch_name AS BranchName, 
                         vault_balance AS VaultBalance, 
-                        row_version AS RowVersion 
+                        row_version AS RowVersion,
+                        is_active AS IsActive
                      FROM branches 
-                     WHERE branch_code = @BranchCode AND is_active = TRUE";
+                     WHERE branch_code = @BranchCode";
 
             //<BranchSearchDTO>কি,কি অর্ডার (কাচ্চি বিরিয়ানি,মাছ)
             var branch = await conn.QueryFirstOrDefaultAsync<BranchSearchDTO>(sql, new { BranchCode = branchCode.Trim() }, transaction);
 
             if (branch == null)
             {
-                //ওয়েটার খালি হাতে ফিরে এসে চুপচাপ দাঁড়িয়ে থাকলো। আপনি বুঝলেন না কি হয়েছে। এটি হলো null রিটার্ন করা।
-                //কিভাবে রিপোর্ট করছি, যদি কাচ্চি বিরিয়ানি, মাছ না পাওয়া যায়, তবে বক্সে একটি চিরকুট থাকবে: "দুঃখিত, এই কোডের কোনো কাচ্চি বিরিয়ানি,মাছ (ব্রাঞ্চ) নেই।"
                 return Result<BranchSearchDTO>.Failure("Branch not found"); 
             }
 
@@ -203,77 +207,80 @@ public class BranchService : IBranchService
 
 
 
-
     public async Task<Result<bool>> UpdateBranchAsync(BranchUpdateDTO udto, int currentUserId)
     {
+        using var conn = await _dataSource.OpenConnectionAsync();
+        using var transaction = await conn.BeginTransactionAsync();
+
         try
         {
-            using var conn = await _dataSource.OpenConnectionAsync();
-            using var transaction = await conn.BeginTransactionAsync();
-
-            // 1. Fetch current branch data from database for validation and audit trail
-            //const string selectSql = "SELECT * FROM branches WHERE id = @Id AND is_active = 1";
-
-
+            // 1. Fetch the current record from the database
             const string selectSql = @"SELECT 
-                                        id AS Id, 
-                                        branch_name AS BranchName, 
-                                        branch_code AS BranchCode, 
-                                        vault_balance AS VaultBalance, 
-                                        created_by AS CreatedBy, 
-                                        updated_by AS UpdatedBy, 
-                                        approved_by AS ApprovedBy, 
-                                        row_version AS RowVersion
-                                      FROM branches WHERE id = @Id AND is_active = 1";
-
-
+                                          id AS Id,
+                                          branch_name AS BranchName,
+                                          branch_code AS BranchCode,
+                                          vault_balance AS VaultBalance,
+                                          created_by AS CreatedBy,
+                                          approved_by AS ApprovedBy,
+                                          row_version AS RowVersion,
+                                          is_active AS IsActive
+                                        FROM branches
+                                        WHERE id = @Id;
+                                        ";
+            //<Branch> is because we need to use the Entity's methods later
             var branch = await conn.QueryFirstOrDefaultAsync<Branch>(selectSql, new { Id = udto.Id }, transaction);
 
             if (branch == null)
-                return Result<bool>.Failure("Branch not found or is currently inactive.");
+                return Result<bool>.Failure("Branch not found.");
 
-            // 2. Capture original values before modification to store in Audit Log
-            string oldVaultBalance = branch.VaultBalance.ToString();
-            string oldBranchCode = branch.BranchCode;
-            string oldBranchName = branch.BranchName;
+            // 2. Capture old values for Audit Logging before updating
+            string oldData = $"Name: {branch.BranchName}, Code: {branch.BranchCode}, Balance: {branch.VaultBalance}, Status: {(branch.IsActive ? "Active" : "Inactive")}";
 
-            // 3. Update entity information using Domain Methods
-            branch.UpdateInfo(udto.BranchCode, udto.BranchName, currentUserId);
-
-            // 4. Validate business rules (e.g., balance limits) before hitting the database
-            var balanceResult = branch.UpdateVaultBalance(udto.VaultBalance);
-            if (!balanceResult.IsSuccess)
+            // 3. Update the Domain Entity using its internal logic
+            // The advantage: business rules only need to be updated in one place within the Entity.
+            try
             {
-                return Result<bool>.Failure(balanceResult.Message);
+                branch.UpdateGeneralInfo(udto.BranchCode, udto.BranchName, udto.VaultBalance, currentUserId);
+
+                //enabling trigger extra actions (like notifications or balance checks) whenever a status changes, all from a single location in the Entity."
+                if (udto.IsActive) branch.Activate(); else branch.Deactivate();
+            }
+            catch (Exception ex)
+            {
+                return Result<bool>.Failure(ex.Message);
             }
 
-            // 5. Final Update Query including Optimistic Concurrency check (row_version)
+            // 4. Final Update query with Optimistic Concurrency check
             const string updateSql = @"UPDATE branches 
                                    SET branch_name = @BranchName, 
                                        branch_code = @BranchCode, 
                                        vault_balance = @VaultBalance, 
+                                       is_active = @IsActive,
                                        updated_by = @UpdatedBy,
+                                       updated_at = @UpdatedAt,
                                        row_version = row_version + 1 
                                    WHERE id = @Id AND row_version = @RowVersion";
 
-            // Execute update using data from the modified Domain Entity
             var affected = await conn.ExecuteAsync(updateSql, new
             {
                 branch.BranchName,
                 branch.BranchCode,
                 branch.VaultBalance,
+                branch.IsActive,
                 branch.UpdatedBy,
+                branch.UpdatedAt,
                 branch.Id,
-                RowVersion = udto.RowVersion // Client-side version to detect concurrent changes
+                RowVersion = udto.RowVersion // Use the RowVersion from DTO to prevent concurrency issues
             }, transaction);
 
+            // If affected is 0, it means the RowVersion has changed (someone else updated it)
             if (affected <= 0)
             {
                 await transaction.RollbackAsync();
-                return Result<bool>.Failure("Update failed. The record was modified by another user (Concurrency Conflict).");
+                return Result<bool>.Failure("Update failed. Data was modified by another user (Concurrency Error).");
             }
 
-            // 6. Create Audit Log comparing Old Values with New Values
+            // 5. Create Audit Log
             var auditDto = new AuditLogCreateDTO(
                 BranchCode: branch.BranchCode,
                 CreatedBy: branch.CreatedBy,
@@ -281,49 +288,33 @@ public class BranchService : IBranchService
                 ApprovedBy: branch.ApprovedBy,
                 TableName: "branches",
                 Action: "UPDATE",
-                OldValue: $"{oldVaultBalance}",
-                NewValue: $"{branch.VaultBalance}",
-                Description: "Branch information updated via user"
+                OldValue: oldData,
+                NewValue: $"Name: {branch.BranchName}, Balance: {branch.VaultBalance}, Status: {(branch.IsActive ? "Active" : "Inactive")}",
+                Description: "Branch information updated successfully"
             );
 
             var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
 
-            // 7. Commit transaction only if both Update and Audit Log creation succeed
-            if (auditResult.IsSuccess)
+            if (!auditResult.IsSuccess)
             {
-                await transaction.CommitAsync();
-                return Result<bool>.Success(true, "Branch updated successfully.");
+                await transaction.RollbackAsync();
+                return Result<bool>.Failure("Update failed due to audit logging error.");
             }
 
-            // Rollback if audit logging fails
-            await transaction.RollbackAsync();
-            return Result<bool>.Failure("Update failed due to an error in the audit logging service.");
-
+            // 6. Commit transaction if everything is successful
+            await transaction.CommitAsync();
+            return Result<bool>.Success(true, "Branch updated successfully.");
         }
         catch (Exception ex)
         {
-            // Log the exception here (e.g., _logger.LogError(ex, "UpdateBranchAsync failed"))
-            return Result<bool>.Failure("A database error occurred while processing your request.");
+            await transaction.RollbackAsync();
+            return Result<bool>.Failure("Database Error: " + ex.Message);
         }
     }
 
 
-    //public async Task<Result<bool>> UpdateBranchAsync(BranchUpdateDTO dto)
-    //{
-    //    using var conn = await _dataSource.OpenConnectionAsync();
-    //    const string sql = @"UPDATE Branches 
-    //                        SET branch_name = @BranchName, 
-    //                            branch_code = @BranchCode, 
-    //                            vault_balance = @VaultBalance, 
-    //                            UpdatedAt = GETDATE(), 
-    //                            row_version = RowVersion + 1 
-    //                         WHERE id = @Id AND row_version = @RowVersion";
 
-    //    var affected = await conn.ExecuteAsync(sql, dto);
-    //    return affected > 0
-    //        ? Result<bool>.Success(true, "Branch Update Successful")
-    //        : Result<bool>.Failure("Update failed (Concurrency conflict).");
-    //}
+
 
 
 

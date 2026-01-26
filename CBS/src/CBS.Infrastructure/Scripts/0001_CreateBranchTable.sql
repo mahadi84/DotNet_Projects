@@ -3,7 +3,7 @@ CREATE TABLE branches (
     id INT AUTO_INCREMENT PRIMARY KEY,   
     branch_code VARCHAR(20) NOT NULL, 
     branch_name VARCHAR(150) NOT NULL,
-    vault_balance DECIMAL(18, 4) NOT NULL DEFAULT 0.0000, 
+    vault_balance DECIMAL(18, 2) NOT NULL DEFAULT 0.00, 
     row_version INT NOT NULL DEFAULT 1, 
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_by INT NOT NULL,

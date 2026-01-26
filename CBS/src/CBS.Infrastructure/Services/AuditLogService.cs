@@ -16,6 +16,12 @@ public class AuditLogService : IAuditLogService
         _dataSource = dataSource;
     }
 
+
+
+
+
+
+
     public async Task<Result<bool>> CreateAuditLogAsync(AuditLogCreateDTO dto)
     {
         try
@@ -52,8 +58,6 @@ public class AuditLogService : IAuditLogService
 
 
 
-
-
     public async Task<PagedResult<IEnumerable<AuditReportViewDTO>>> GetAuditReportAsync(AuditReportFilterDTO filter)
     {
         using var connection = await _dataSource.OpenConnectionAsync();
@@ -77,19 +81,19 @@ public class AuditLogService : IAuditLogService
             parameters.Add("CreatedBy", filter.CreatedBy);
         }
 
-        // UpdatedBy ফিল্টার (যদি filter-এ থাকে)
-        if (filter.UpdatedBy.HasValue)
-        {
-            sqlBody.Append(" AND al.updated_by = @UpdatedBy ");
-            parameters.Add("UpdatedBy", filter.UpdatedBy);
-        }
+        //// UpdatedBy ফিল্টার (যদি filter-এ থাকে)
+        //if (filter.UpdatedBy.HasValue)
+        //{
+        //    sqlBody.Append(" AND al.updated_by = @UpdatedBy ");
+        //    parameters.Add("UpdatedBy", filter.UpdatedBy);
+        //}
 
-        // ApprovedBy ফিল্টার (যদি filter-এ থাকে)
-        if (filter.ApprovedBy.HasValue)
-        {
-            sqlBody.Append(" AND al.approved_by = @ApprovedBy ");
-            parameters.Add("ApprovedBy", filter.ApprovedBy);
-        }
+        //// ApprovedBy ফিল্টার (যদি filter-এ থাকে)
+        //if (filter.ApprovedBy.HasValue)
+        //{
+        //    sqlBody.Append(" AND al.approved_by = @ApprovedBy ");
+        //    parameters.Add("ApprovedBy", filter.ApprovedBy);
+        //}
 
         if (filter.FromDate.HasValue && filter.ToDate.HasValue)
         {
@@ -102,14 +106,12 @@ public class AuditLogService : IAuditLogService
         string countSql = $"SELECT COUNT(*) {sqlBody}";
         int totalRecords = await connection.ExecuteScalarAsync<int>(countSql, parameters);
 
-        // ✅ **সংশোধিত SELECT query - সব column include করা হয়েছে**
+        // ✅ this data will show in the view
         string selectSql = $@"
                             SELECT 
                                 al.id,
                                 al.branch_code as BranchCode, 
-                                al.created_by as CreatedBy,
-                                al.updated_by as UpdatedBy,   
-                                al.approved_by as ApprovedBy,  
+                                al.created_by as CreatedBy,                                
                                 al.table_name as TableName,
                                 al.action as Action,
                                 al.old_value as OldValue,

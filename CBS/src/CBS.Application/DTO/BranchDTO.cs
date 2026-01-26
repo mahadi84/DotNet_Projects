@@ -18,16 +18,14 @@ public record BranchCreateDTO(
     decimal VaultBalance
     );
 
+public record BranchResponseDTO(
+   int Id,
+   string BranchName,
+   string BranchCode,
+   decimal VaultBalance
+);
 
 
-
-//public record BranchSearchDTO(
-//    int Id,
-//    string BranchName,
-//    string BranchCode,
-//    decimal VaultBalance,
-//    int RowVersion
-//);
 
 public class BranchSearchDTO
 {
@@ -36,6 +34,8 @@ public class BranchSearchDTO
     public string BranchCode { get; set; } = string.Empty;
     public decimal VaultBalance { get; set; }
     public int RowVersion { get; set; }
+
+    public bool IsActive { get; set; }
 }
 
 
@@ -63,6 +63,10 @@ public record BranchUpdateDTO(
 
     [Required(ErrorMessage = "RowVersion is missing")]
     // RowVersion is a number, so we don't need a Regex for it
-    int RowVersion
+    int RowVersion,
+
+    [Required(ErrorMessage = "Selection is missing")]
+    // RowVersion is a number, so we don't need a Regex for it
+    bool IsActive
 );
 

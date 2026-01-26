@@ -68,6 +68,31 @@
                             </div>
                             <span asp-validation-for="VaultBalance" class="text-danger small"></span>
                         </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Branch Status</label>
+                            <div class="input-group">
+                                <div class="form-control d-flex align-items-center">
+                                    <div class="form-check form-check-inline mb-0">
+                                        <input class="form-check-input" type="radio" asp-for="IsActive" value="true" id="statusActive">
+                                        <label class="form-check-label text-success fw-bold" for="statusActive">
+                                            Active <span class="ms-1">&#10004;</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-control d-flex align-items-center">
+                                    <div class="form-check form-check-inline mb-0">
+                                        <input class="form-check-input" type="radio" asp-for="IsActive" value="false" id="statusInactive">
+                                        <label class="form-check-label text-danger fw-bold" for="statusInactive">
+                                            Inactive <span class="ms-1">&#10006;</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <span asp-validation-for="IsActive" class="text-danger small"></span>
+                        </div>
+
                     </div>
 
                     <div class="mt-4 border-top pt-3 text-end">

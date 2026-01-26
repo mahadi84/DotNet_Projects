@@ -14,18 +14,21 @@ public class AuditReportController : Controller
         _auditLogService = auditLogService;
     }
 
+
+
+
     [HttpGet]
-    public async Task<IActionResult> Index(string? branchCode, int? createdBy, int? updatedBy, int? approvedBy, DateTime? fromDate, DateTime? toDate, int pageNumber = 1, int pageSize = 10)
+    // Show at first load(with pagination) than
+    // Search(with branchCode, CreatedBy, from DateTime to DateTime)+Show (with pagination)
+    public async Task<IActionResult> Index(string? branchCode, int? userId, DateTime? fromDate, DateTime? toDate)
     {
         var filter = new AuditReportFilterDTO(
             BranchCode: branchCode,
-            CreatedBy: createdBy,
-            UpdatedBy: updatedBy,
-            ApprovedBy: approvedBy,
+            CreatedBy: userId,
             FromDate: fromDate,
             ToDate: toDate,
-            PageNumber: pageNumber,
-            PageSize: pageSize
+            PageNumber: 1,
+            PageSize: 10
         );
 
         var result = await _auditLogService.GetAuditReportAsync(filter);
@@ -35,7 +38,7 @@ public class AuditReportController : Controller
 
         // এই ভ্যালুগুলো ভিউতে ইনপুট ফিল্ডে পুনরায় দেখানোর জন্য
         ViewData["BranchCode"] = branchCode;
-        ViewData["UserId"]     = createdBy;
+        ViewData["UserId"]     = userId;
         ViewData["FromDate"]   = fromDate?.ToString("yyyy-MM-dd");
         ViewData["ToDate"]     = toDate?.ToString("yyyy-MM-dd");
 

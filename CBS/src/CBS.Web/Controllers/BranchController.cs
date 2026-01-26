@@ -39,11 +39,17 @@ public class BranchController : Controller
 
         if (result.IsSuccess)
         {
-            // get data from dynamic and create message
-            var branchName = result.Data.branch_name;
-            var branchCode = result.Data.branch_code;
 
-            TempData["Success"] = $"{result.Message} Branch: {branchName} ({branchCode})";
+            // get data from dynamic and create message
+            var data = result.Data;
+
+            var id = data.Id;
+            var branchName = data.BranchName;
+            var branchCode = data.BranchCode;
+            var vaultBalance = data.VaultBalance;
+            
+
+            TempData["Success"] = $"{result.Message}, ID:{id}, Branch: {branchName} ({branchCode}), Vault Balance: ({vaultBalance})";
 
             return RedirectToAction(nameof(Index));
         }
@@ -92,7 +98,8 @@ public class BranchController : Controller
             result.Data.BranchName,
             result.Data.BranchCode,
             result.Data.VaultBalance,
-            result.Data.RowVersion
+            result.Data.RowVersion,
+            result.Data.IsActive
         );
 
         return View(updateModel);
