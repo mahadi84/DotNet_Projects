@@ -3,6 +3,7 @@ using CBS.Application.Interfaces;
 using CBS.Domain.Common;
 using Dapper;
 using MySqlConnector;
+using QuestPDF.Fluent;
 using System.Text;
 
 namespace CBS.Infrastructure.Services;
@@ -132,6 +133,15 @@ public class AuditLogService : IAuditLogService
 
 
 
+    public async Task<byte[]> GenerateAuditPdfAsync(AuditReportFilterDTO filter)
+    {
+        // পেজিনেশন এড়িয়ে সব ডাটা আনার জন্য PageSize বড় করে দিন
+        filter = filter with { PageNumber = 1, PageSize = 10000 };
+        var reportData = await GetAuditReportAsync(filter);
+
+        var document = new AuditReportPDF(reportData.Items);
+        return document.GeneratePdf();
+    }
 
 
 

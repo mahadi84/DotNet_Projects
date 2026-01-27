@@ -8,5 +8,6 @@ public interface IAuditLogService
     Task<Result<bool>> CreateAuditLogAsync(AuditLogCreateDTO dto);
 
     Task<PagedResult<IEnumerable<AuditReportViewDTO>>> GetAuditReportAsync(AuditReportFilterDTO filter);
+    Task<byte[]> GenerateAuditPdfAsync(AuditReportFilterDTO filter);
 
 }

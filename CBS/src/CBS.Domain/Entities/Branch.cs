@@ -33,6 +33,10 @@ public class Branch
         };
     }
 
+   
+    
+    
+    
     //Update Info (Balance `=` NOT `+=`)
     public void UpdateGeneralInfo(string code, string name, decimal finalBalance, int updaterId)
     {
@@ -45,10 +49,14 @@ public class Branch
         this.UpdatedAt = DateTime.Now;
     }
 
+    
+    
+    
+    
     // Deposit/Withdraw (`+=` OR `-=`) 
     public Result<bool> ExecuteTransaction(decimal amount)
     {
-        if (amount == 0) return Result<bool>.Failure("Amount cannot be zero");
+        if (amount <= 0) return Result<bool>.Failure("Amount cannot be zero or negetive");
 
         if (amount > 0) // Deposit
         {

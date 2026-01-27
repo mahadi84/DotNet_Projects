@@ -14,8 +14,25 @@
 <div class="container-fluid mt-4">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Audit Trail Report</h1>
-        <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary shadow-sm">Refresh</a>
+
+        <div class="d-flex gap-2">
+            <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary shadow-sm">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </a>
+            <a asp-action="DownloadPdf"
+               asp-route-branchCode="@ViewData["BranchCode"]"
+               asp-route-userId="@ViewData["UserId"]"
+               asp-route-fromDate="@ViewData["FromDate"]"
+               asp-route-toDate="@ViewData["ToDate"]"
+               class="btn btn-sm btn-outline-success shadow-sm">
+                <i class="fas fa-file-pdf"></i> PDF
+            </a>
+        </div>
     </div>
+
+
+   
+
 
     <div class="card shadow mb-4">
         <div class="card-body">

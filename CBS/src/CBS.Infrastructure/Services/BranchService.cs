@@ -100,7 +100,7 @@ public class BranchService : IBranchService
                 TableName: "branches",
                 Action: "CREATE",
                 OldValue: "-",
-                NewValue: $"Name: {newBranch.BranchName}, Vault Balance: {newBranch.VaultBalance}",
+                NewValue: $"Name: {newBranch.BranchName}, Balance: {newBranch.VaultBalance}, Status: {(newBranch.IsActive ? "Active" : "Inactive")}",
                 Description: "New Branch created"
             );
 

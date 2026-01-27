@@ -44,4 +44,38 @@ public class AuditReportController : Controller
 
         return View(result);
     }
+
+
+
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadPdf(string? branchCode, int? userId, DateTime? fromDate, DateTime? toDate)
+    {
+        var filter = new AuditReportFilterDTO(
+            BranchCode: branchCode,
+            CreatedBy: userId,
+            FromDate: fromDate,
+            ToDate: toDate,
+            PageNumber: 1,
+            PageSize: 10000
+        );
+
+        byte[] pdfBytes = await _auditLogService.GenerateAuditPdfAsync(filter);
+        string fileName = $"AuditReport_{DateTime.Now:yyyyMMdd}.pdf";
+
+        return File(pdfBytes, "application/pdf", fileName);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

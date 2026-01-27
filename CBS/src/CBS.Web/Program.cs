@@ -2,6 +2,7 @@
 using CBS.Infrastructure.AddToRoute;
 using CBS.Infrastructure.Services;
 using Domain.Entities;
+using QuestPDF.Infrastructure;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +16,7 @@ builder.Services.AddScoped<IBranchService, BranchService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 
+QuestPDF.Settings.License = LicenseType.Community;
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
