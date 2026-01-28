@@ -14,6 +14,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Interface এবং এর Implementation ক্লাস রেজিস্টার করা
 builder.Services.AddScoped<IBranchService, BranchService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 
 QuestPDF.Settings.License = LicenseType.Community;

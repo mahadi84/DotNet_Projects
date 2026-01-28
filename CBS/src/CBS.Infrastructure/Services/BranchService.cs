@@ -33,8 +33,6 @@ public class BranchService : IBranchService
 
 
 
-
-
     public async Task<Result<BranchResponseDTO>> CreateBranchAsync(BranchCreateDTO bcdto, int UserID)
     {
         using var connection = await _dataSource.OpenConnectionAsync();
@@ -137,9 +135,6 @@ public class BranchService : IBranchService
 
 
 
-
-
-
     public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCode, int UserID)
     {
         using var conn = await _dataSource.OpenConnectionAsync();
@@ -197,13 +192,6 @@ public class BranchService : IBranchService
         }
 
     }
-
-
-
-
-
-
-
 
 
 
@@ -311,6 +299,39 @@ public class BranchService : IBranchService
             return Result<bool>.Failure("Database Error: " + ex.Message);
         }
     }
+
+
+
+
+    public async Task<Result<IEnumerable<GetAllBranchNameAndCodeDTO>>> GetAllBranchNameAndCodeAsync()
+    {
+        using var conn = await _dataSource.OpenConnectionAsync();
+
+        try
+        {
+            const string sql = @"SELECT 
+                                branch_code AS BranchCode, 
+                                branch_name AS BranchName
+                             FROM branches 
+                             WHERE is_active=true";
+
+            var branches = await conn.QueryAsync<GetAllBranchNameAndCodeDTO>(sql);
+
+            if (branches == null || !branches.Any())
+            {
+                return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("Create Branch first");
+            }
+
+            return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Success(branches, "Branches found");
+        }
+        catch (Exception ex)
+        {
+            return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("Database Error: " + ex.Message);
+        }
+    }
+
+
+
 
 
 

@@ -1,0 +1,83 @@
+﻿@using CBS.Domain.Entities
+@model CBS.Application.DTO.UserCreateDTO
+
+<div class="container mt-5">
+    <div class="col-md-6 mx-auto">
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success">@TempData["Success"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Error"]</div>
+        }
+
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">Create New User</div>
+            <div class="card-body">
+
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label asp-for="Username" class="form-label"></label>
+                        <input asp-for="Username" class="form-control" />
+                        <span asp-validation-for="Username" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label"></label>
+                        <input asp-for="Password" type="password" class="form-control" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Role" class="form-label"></label>
+                        <select asp-for="Role" class="form-select">
+                            <option value="@UserRole.HoSuperAdmin">HoSuperAdmin</option>
+                            <option value="@UserRole.BrAdmin">BrAdmin</option>
+                            <option value="@UserRole.Auditor">Auditor</option>
+                            <option value="@UserRole.Maker">Maker</option>
+                            <option value="@UserRole.Checker">Checker</option>
+                        </select>
+                    </div>
+
+
+                    <div class="mb-3">
+                        <label asp-for="BranchCode" class="form-label">Branch</label>
+                        <select asp-for="BranchCode" class="form-select">
+                            <option value="">Select Branch</option>
+                            @{ var branches = ViewBag.Branches as SelectList; }
+                            @if (branches != null)
+                            {
+                                @foreach (var branch in branches)
+                                {
+                                    <option value="@branch.Value">@branch.Text</option>
+                                }
+                            }
+                            else
+                            {
+                                <option value="">No branches available</option>
+                            }
+                        </select>
+                        <span asp-validation-for="BranchCode" class="text-danger small"></span>
+                    </div>
+
+
+
+                    <button class="btn btn-success w-100" type="submit">Save</button>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <a asp-action="Manage">Manage User</a> | <a asp-action="Login">Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

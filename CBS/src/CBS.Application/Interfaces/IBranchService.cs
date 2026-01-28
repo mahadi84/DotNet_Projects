@@ -10,6 +10,10 @@ public interface IBranchService
    
     Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCode, int UserID);
     Task<Result<bool>> UpdateBranchAsync(BranchUpdateDTO dto, int UserID);
+
+
+    //IEnumerable<T> to hold a collection of items like List<T>, Array, HashSet<T>, use loops to iterate through the collection
+    Task<Result<IEnumerable<GetAllBranchNameAndCodeDTO>>> GetAllBranchNameAndCodeAsync();
 }
     
 

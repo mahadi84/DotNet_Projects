@@ -70,3 +70,18 @@ public record BranchUpdateDTO(
     bool IsActive
 );
 
+
+
+
+public class GetAllBranchNameAndCodeDTO
+{
+    public string BranchCode { get; set; }
+    public string BranchName { get; set; }
+
+    // Constructor with parameters
+    public GetAllBranchNameAndCodeDTO(string branchCode, string branchName)
+    {
+        BranchCode = branchCode;
+        BranchName = branchName;
+    }
+}
