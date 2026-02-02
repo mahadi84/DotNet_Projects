@@ -36,13 +36,19 @@ namespace CBS.Web.Controllers;
         if (!result.IsSuccess)
         {
             TempData["Error"] = result.Message;
-            return View(new UserCreateDTO("", "", UserRole.Maker, ""));
+            return View(new UserCreateDTO("", "", UserRole.Maker, 0));
         }
 
-        // Ensure ViewBag.Branches is a SelectList
-        ViewBag.Branches = new SelectList(result.Data, "BranchCode", "BranchName");
 
-        return View(new UserCreateDTO("", "", UserRole.Maker, ""));
+        // ড্রপডাউনের জন্য নাম এবং কোড কনক্যাটিনেট করা
+        var branchList = result.Data.Select(b => new {
+            BranchId = b.BranchId,
+            DisplayText = $"{b.BranchName} ({b.BranchCode})"
+        }).ToList();
+
+        ViewBag.Branches = new SelectList(branchList, "BranchId", "DisplayText");
+
+        return View(new UserCreateDTO("", "", UserRole.Maker, 0));
     }
 
 
@@ -71,62 +77,133 @@ namespace CBS.Web.Controllers;
 
 
 
-    //[HttpGet]
-    //public async Task<IActionResult> Index()
+    // -------------------------
+    // MANAGE (Search) + UPDATE
+    // -------------------------
+    [HttpGet]
+    public async Task<IActionResult> ShowUserInfo(string? username)
+    {
+        // ১. ইউজারনেম চেক
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            ViewData["Error"] = "Please provide a username to search.";
+            return View();
+        }
+
+        int currentUserId = 2; // সাধারণত এটি User.Identity থেকে আসে
+
+        // ২. সার্ভিস থেকে ডেটা আনা
+        var result = await _userService.GetByUsernameAsync(username.Trim(), currentUserId);
+
+        if (!result.IsSuccess)
+        {
+            ViewData["Error"] = result.Message;
+            return View(); // মডেল নাল থাকবে, তাই ভিউতে 'Not Found' মেসেজ দেখাবে
+        }
+
+        // ৩. মডেল রিটার্ন করা (সরাসরি result.Data ও পাঠানো যায়)
+        return View(result.Data);
+    }
+
+
+
+
+
+
+    // -------------------------
+    // MANAGE (Search and Show)
+    // -------------------------
+
+
+    [HttpGet]
+    public async Task<IActionResult> Manage(string? username)
+    {
+
+        // Always load the branch list first to prevent NullReferenceException in the View
+        //await PopulateBranchList();
+        
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            ViewData["Error"] = "Username cannot be empty.";
+            return View();
+        }
+
+
+
+        int currentUserId = 2;
+        var result = await _userService.GetByUsernameAsync(username, currentUserId);
+        if (!result.IsSuccess)
+        {
+            ViewData["Error"] = result.Message;
+            return View();
+        }
+
+        var model = new UserUpdateDTO
+        {
+            Id = result.Data.Id,
+            Username = result.Data.Username,
+            Role = result.Data.Role,
+            BranchId = result.Data.BranchId,
+            BranchCode = result.Data.BranchCode,
+            IsActive = result.Data.IsActive,
+            IsLocked = result.Data.IsLocked,
+            FailedAttempts = result.Data.FailedAttempts,
+            CreatedBy = result.Data.CreatedBy,
+            ApprovedBy = result.Data.ApprovedBy,
+            UpdatedBy = result.Data.UpdatedBy,
+            CreatedAt = result.Data.CreatedAt,
+            UpdatedAt = result.Data.UpdatedAt,
+            //NewPassword = null // যেহেতু এটি Class, তাই সব ফিল্ড সেট করা বাধ্যতামূলক নয়
+        };
+
+
+
+        var branchResult = await _branchService.GetAllBranchNameAndCodeAsync();
+
+        if (branchResult != null && branchResult.IsSuccess)
+        {
+
+            var branchList = branchResult.Data.Select(b => new {
+                BranchId = b.BranchId,
+                DisplayText = $"{b.BranchName} ({b.BranchCode})"
+            }).ToList();
+            ViewBag.Branches = new SelectList(branchList, "BranchId", "DisplayText"); 
+        }
+        else
+        {
+            // Fallback to avoid crash if DB is down
+            ViewBag.Branches = new SelectList(new List<SelectListItem>());
+        }
+
+
+
+
+        return View(model);
+    }
+
+
+
+
+    //// Helper method to fetch branches and create the SelectList
+    //private async Task PopulateBranchList()
     //{
-    //    // ড্রপডাউন লিস্ট লোড করার জন্য প্রাইভেট মেথড কল করা
-    //    await PopulateBranchListAsync();
+    //    // Fetch all branches from your Branch Service
+    //    var branchResult = await _branchService.GetAllBranchNameAndCodeAsync();
 
-    //    // শুরুতে একটি খালি DTO পাঠানো হচ্ছে
-    //    return View(new UserCreateDTO("", "", UserRole.Maker, ""));
-    //}
-
-    //[HttpPost]
-    //[ValidateAntiForgeryToken]
-    //public async Task<IActionResult> Create(UserCreateDTO dto)
-    //{
-    //    if (!ModelState.IsValid)
+    //    if (branchResult != null && branchResult.IsSuccess)
     //    {
-    //        // ভ্যালিডেশন ফেইল করলে ড্রপডাউন ডেটা আবার লোড করতে হবে
-    //        await PopulateBranchListAsync();
-    //        return View("Index", dto);
-    //    }
-
-    //    int currentUserId = 1; // TODO: Get from Auth/Session
-    //    var result = await _userService.CreateUserAsync(dto, currentUserId);
-
-    //    if (result.IsSuccess)
-    //    {
-    //        TempData["Success"] = $"{result.Message} | Username: {result.Data.Username}";
-    //        return RedirectToAction(nameof(Index));
-    //    }
-
-    //    // সার্ভিস থেকে এরর আসলে সেটি দেখানো এবং ড্রপডাউন আবার লোড করা
-    //    TempData["Error"] = result.Message;
-    //    await PopulateBranchListAsync();
-    //    return View("Index", dto);
-    //}
-
-    //// --- হেল্পার মেথড (Private Helper Method) ---
-    //private async Task PopulateBranchListAsync()
-    //{
-    //    var branchesResult = await _branchService.GetAllBranchNameAndCodeAsync();
-
-    //    if (branchesResult.IsSuccess && branchesResult.Data != null)
-    //    {
-    //        // ব্রাঞ্চের লিস্টকে SelectListItem এ রূপান্তর করে ViewBag এ রাখা
-    //        ViewBag.BranchList = branchesResult.Data.Select(b => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
-    //        {
-    //            Value = b.BranchCode,
-    //            Text = $"{b.BranchName} ({b.BranchCode})"
-    //        }).ToList();
+    //        // Parameter 1: The data source
+    //        // Parameter 2: The "Value" (BranchId) sent to the Controller
+    //        // Parameter 3: The "Text" (BranchCode) shown to the User
+    //        ViewBag.BranchList = new SelectList(branchResult.Data, "BranchId", "BranchCode");
     //    }
     //    else
     //    {
-    //        // যদি ডাটা না পাওয়া যায় তবে অন্তত একটি খালি লিস্ট পাঠানো যাতে এরর না হয়
-    //        ViewBag.BranchList = new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    //        // Fallback to avoid crash if DB is down
+    //        ViewBag.BranchList = new SelectList(new List<SelectListItem>());
     //    }
     //}
+
 
 
 

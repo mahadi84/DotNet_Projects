@@ -27,7 +27,7 @@ public record BranchResponseDTO(
 
 
 
-public class BranchSearchDTO
+public class SearchBranchByCodeDTO
 {
     public int Id { get; set; }
     public string BranchName { get; set; } = string.Empty;
@@ -68,6 +68,8 @@ public record BranchUpdateDTO(
     [Required(ErrorMessage = "Selection is missing")]
     // RowVersion is a number, so we don't need a Regex for it
     bool IsActive
+
+   
 );
 
 
@@ -75,13 +77,24 @@ public record BranchUpdateDTO(
 
 public class GetAllBranchNameAndCodeDTO
 {
+    public int BranchId { get; set; }
     public string BranchCode { get; set; }
     public string BranchName { get; set; }
 
     // Constructor with parameters
-    public GetAllBranchNameAndCodeDTO(string branchCode, string branchName)
+    public GetAllBranchNameAndCodeDTO(int branchId, string branchCode, string branchName)
     {
+        BranchId = branchId;
         BranchCode = branchCode;
         BranchName = branchName;
     }
+
+
+
+
+
+
+
+
+
 }

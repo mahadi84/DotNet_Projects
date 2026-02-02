@@ -42,9 +42,9 @@ public class BranchService : IBranchService
         {
             // 1. Duplicate Branch Check
             const string checkSql = "SELECT COUNT(1) FROM branches WHERE branch_code = @BranchCode;";
-            var countBranchCode = await connection.ExecuteScalarAsync<int>(checkSql, new { bcdto.BranchCode }, transaction);
+            var countBranchId = await connection.ExecuteScalarAsync<int>(checkSql, new { bcdto.BranchCode }, transaction);
 
-            if (countBranchCode > 0)
+            if (countBranchId > 0)
             {
                 return Result<BranchResponseDTO>.Failure("Branch code already exists.");
             }
@@ -98,7 +98,7 @@ public class BranchService : IBranchService
                 TableName: "branches",
                 Action: "CREATE",
                 OldValue: "-",
-                NewValue: $"Name: {newBranch.BranchName}, Balance: {newBranch.VaultBalance}, Status: {(newBranch.IsActive ? "Active" : "Inactive")}",
+                NewValue: $"Name: {newBranch.BranchName}, Branch_Code: {newBranch.BranchCode}, Balance: {newBranch.VaultBalance}, Status: {(newBranch.IsActive ? "Active" : "Inactive")}",
                 Description: "New Branch created"
             );
 
@@ -135,7 +135,7 @@ public class BranchService : IBranchService
 
 
 
-    public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCode, int UserID)
+    public async Task<Result<SearchBranchByCodeDTO>> SearchBranchByCodeAsync(string branchCode, int UserID)
     {
         using var conn = await _dataSource.OpenConnectionAsync();
         using var transaction = await conn.BeginTransactionAsync(); // Banking transaction start
@@ -153,12 +153,12 @@ public class BranchService : IBranchService
                      FROM branches 
                      WHERE branch_code = @BranchCode";
 
-            //<BranchSearchDTO>কি,কি অর্ডার (কাচ্চি বিরিয়ানি,মাছ)
-            var branch = await conn.QueryFirstOrDefaultAsync<BranchSearchDTO>(sql, new { BranchCode = branchCode.Trim() }, transaction);
+            //<SearchBranchByCodeDTO>কি,কি অর্ডার (কাচ্চি বিরিয়ানি,মাছ)
+            var branch = await conn.QueryFirstOrDefaultAsync<SearchBranchByCodeDTO>(sql, new { BranchCode = branchCode.Trim() }, transaction);
 
             if (branch == null)
             {
-                return Result<BranchSearchDTO>.Failure("Branch not found"); 
+                return Result<SearchBranchByCodeDTO>.Failure("Branch not found"); 
             }
 
             // 3. audit log create(new data save so OldValue=null) 
@@ -179,16 +179,16 @@ public class BranchService : IBranchService
             if (!auditResult.IsSuccess)
             {
                 await transaction.RollbackAsync(); 
-                return Result<BranchSearchDTO>.Failure("Audit log failed. Transaction rolled back.");
+                return Result<SearchBranchByCodeDTO>.Failure("Audit log failed. Transaction rolled back.");
             }
 
             await transaction.CommitAsync();
-            return Result<BranchSearchDTO>.Success(branch); // মাছ পেলে, সুন্দর বক্সে ভরে পাঠাচ্ছেন(Result<>,Wrapper Class)
+            return Result<SearchBranchByCodeDTO>.Success(branch); 
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            return Result<BranchSearchDTO>.Failure("Database Error"+ ex.Message);
+            return Result<SearchBranchByCodeDTO>.Failure("Database Error"+ ex.Message);
         }
 
     }
@@ -218,8 +218,8 @@ public class BranchService : IBranchService
             //<Branch> is because we need to use the Entity's methods later
             var branch = await conn.QueryFirstOrDefaultAsync<Branch>(selectSql, new { Id = udto.Id }, transaction);
 
-            if (branch == null)
-                return Result<bool>.Failure("Branch not found.");
+            if (branch == null)  return Result<bool>.Failure("Branch not found.");
+
 
             // 2. Capture old values for Audit Logging before updating
             string oldData = $"Name: {branch.BranchName}, Code: {branch.BranchCode}, Balance: {branch.VaultBalance}, Status: {(branch.IsActive ? "Active" : "Inactive")}";
@@ -270,14 +270,14 @@ public class BranchService : IBranchService
 
             // 5. Create Audit Log
             var auditDto = new AuditLogCreateDTO(
-                BranchCode: branch.BranchCode,
+                BranchCode: branch.BranchCode, // latest branch code
                 CreatedBy: branch.CreatedBy,
                 UpdatedBy: currentUserId,
                 ApprovedBy: branch.ApprovedBy,
                 TableName: "branches",
                 Action: "UPDATE",
                 OldValue: oldData,
-                NewValue: $"Name: {branch.BranchName}, Balance: {branch.VaultBalance}, Status: {(branch.IsActive ? "Active" : "Inactive")}",
+                NewValue: $"Name: {branch.BranchName}, Code: {branch.BranchCode}, Balance: {branch.VaultBalance}, Status: {(branch.IsActive ? "Active" : "Inactive")}",
                 Description: "Branch information updated successfully"
             );
 
@@ -303,6 +303,7 @@ public class BranchService : IBranchService
 
 
 
+
     public async Task<Result<IEnumerable<GetAllBranchNameAndCodeDTO>>> GetAllBranchNameAndCodeAsync()
     {
         using var conn = await _dataSource.OpenConnectionAsync();
@@ -310,16 +311,18 @@ public class BranchService : IBranchService
         try
         {
             const string sql = @"SELECT 
+                                id AS BranchId,
                                 branch_code AS BranchCode, 
                                 branch_name AS BranchName
                              FROM branches 
-                             WHERE is_active=true";
+                             WHERE is_active = true"; 
+                                   //AND is_active = true";
 
             var branches = await conn.QueryAsync<GetAllBranchNameAndCodeDTO>(sql);
 
             if (branches == null || !branches.Any())
             {
-                return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("Create Branch first");
+                return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("No Branch Found for dropdown");
             }
 
             return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Success(branches, "Branches found");
@@ -329,8 +332,6 @@ public class BranchService : IBranchService
             return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("Database Error: " + ex.Message);
         }
     }
-
-
 
 
 

@@ -61,54 +61,57 @@ public class AuditLogService : IAuditLogService
 
     public async Task<PagedResult<IEnumerable<AuditReportViewDTO>>> GetAuditReportAsync(AuditReportFilterDTO filter)
     {
-        using var connection = await _dataSource.OpenConnectionAsync();
 
-        var sqlBody = new StringBuilder(@"
+
+            using var connection = await _dataSource.OpenConnectionAsync();
+
+            var sqlBody = new StringBuilder(@"
                     FROM audit_logs al
                     WHERE 1=1 ");
 
-        var parameters = new DynamicParameters();
+            var parameters = new DynamicParameters();
 
         // ✅ BranchCode ফিল্টার (টেবিলে VARCHAR, DTO-তে string? - সরাসরি compare)
-        if (!string.IsNullOrEmpty(filter.BranchCode))
-        {
-            sqlBody.Append(" AND al.branch_code = @BranchCode ");
-            parameters.Add("BranchCode", filter.BranchCode);
-        }
 
-        if (filter.CreatedBy.HasValue)
-        {
-            sqlBody.Append(" AND al.created_by = @CreatedBy ");
-            parameters.Add("CreatedBy", filter.CreatedBy);
-        }
+            if (!string.IsNullOrEmpty(filter.BranchCode))
+            {
+                sqlBody.Append(" AND al.branch_code = @BranchCode ");
+                parameters.Add("BranchCode", filter.BranchCode);
+            }
 
-        //// UpdatedBy ফিল্টার (যদি filter-এ থাকে)
-        //if (filter.UpdatedBy.HasValue)
-        //{
-        //    sqlBody.Append(" AND al.updated_by = @UpdatedBy ");
-        //    parameters.Add("UpdatedBy", filter.UpdatedBy);
-        //}
+            if (filter.CreatedBy.HasValue)
+            {
+                sqlBody.Append(" AND al.created_by = @CreatedBy ");
+                parameters.Add("CreatedBy", filter.CreatedBy);
+            }
 
-        //// ApprovedBy ফিল্টার (যদি filter-এ থাকে)
-        //if (filter.ApprovedBy.HasValue)
-        //{
-        //    sqlBody.Append(" AND al.approved_by = @ApprovedBy ");
-        //    parameters.Add("ApprovedBy", filter.ApprovedBy);
-        //}
+            //// UpdatedBy ফিল্টার (যদি filter-এ থাকে)
+            //if (filter.UpdatedBy.HasValue)
+            //{
+            //    sqlBody.Append(" AND al.updated_by = @UpdatedBy ");
+            //    parameters.Add("UpdatedBy", filter.UpdatedBy);
+            //}
 
-        if (filter.FromDate.HasValue && filter.ToDate.HasValue)
-        {
-            sqlBody.Append(" AND DATE(al.created_at) BETWEEN DATE(@FromDate) AND DATE(@ToDate) ");
-            parameters.Add("FromDate", filter.FromDate);
-            parameters.Add("ToDate", filter.ToDate);
-        }
+            //// ApprovedBy ফিল্টার (যদি filter-এ থাকে)
+            //if (filter.ApprovedBy.HasValue)
+            //{
+            //    sqlBody.Append(" AND al.approved_by = @ApprovedBy ");
+            //    parameters.Add("ApprovedBy", filter.ApprovedBy);
+            //}
 
-        // টোটাল রেকর্ড কাউন্ট
-        string countSql = $"SELECT COUNT(*) {sqlBody}";
-        int totalRecords = await connection.ExecuteScalarAsync<int>(countSql, parameters);
+            if (filter.FromDate.HasValue && filter.ToDate.HasValue)
+            {
+                sqlBody.Append(" AND DATE(al.created_at) BETWEEN DATE(@FromDate) AND DATE(@ToDate) ");
+                parameters.Add("FromDate", filter.FromDate);
+                parameters.Add("ToDate", filter.ToDate);
+            }
 
-        // ✅ this data will show in the view
-        string selectSql = $@"
+            // টোটাল রেকর্ড কাউন্ট
+            string countSql = $"SELECT COUNT(*) {sqlBody}";
+            int totalRecords = await connection.ExecuteScalarAsync<int>(countSql, parameters);
+
+            // ✅ this data will show in the view
+            string selectSql = $@"
                             SELECT 
                                 al.id,
                                 al.branch_code as BranchCode, 
@@ -123,13 +126,19 @@ public class AuditLogService : IAuditLogService
                             ORDER BY al.id DESC 
                             LIMIT @Offset, @PageSize";
 
-        parameters.Add("Offset", (filter.PageNumber - 1) * filter.PageSize);
-        parameters.Add("PageSize", filter.PageSize);
+            parameters.Add("Offset", (filter.PageNumber - 1) * filter.PageSize);
+            parameters.Add("PageSize", filter.PageSize);
 
-        var data = await connection.QueryAsync<AuditReportViewDTO>(selectSql, parameters);
+            var data = await connection.QueryAsync<AuditReportViewDTO>(selectSql, parameters);
 
-        return new PagedResult<IEnumerable<AuditReportViewDTO>>(data, totalRecords, filter.PageNumber, filter.PageSize);
-    }
+            return new PagedResult<IEnumerable<AuditReportViewDTO>>(data, totalRecords, filter.PageNumber, filter.PageSize);
+        }
+        
+
+
+
+
+
 
 
 

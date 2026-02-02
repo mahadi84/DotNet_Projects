@@ -45,27 +45,20 @@
                         </select>
                     </div>
 
-
                     <div class="mb-3">
-                        <label asp-for="BranchCode" class="form-label">Branch</label>
-                        <select asp-for="BranchCode" class="form-select">
-                            <option value="">Select Branch</option>
-                            @{ var branches = ViewBag.Branches as SelectList; }
-                            @if (branches != null)
-                            {
-                                @foreach (var branch in branches)
-                                {
-                                    <option value="@branch.Value">@branch.Text</option>
-                                }
-                            }
-                            else
-                            {
-                                <option value="">No branches available</option>
-                            }
+                        <label asp-for="BranchId" class="form-label">Branch</label>
+                        <select asp-for="BranchId" class="form-select"
+                                asp-items="@(ViewBag.Branches as SelectList)">
+                            <option value="">-- Select Branch --</option>
                         </select>
-                        <span asp-validation-for="BranchCode" class="text-danger small"></span>
-                    </div>
 
+                        @if (ViewBag.Branches == null)
+                        {
+                            <p class="text-muted small">No branches available</p>
+                        }
+
+                        <span asp-validation-for="BranchId" class="text-danger small"></span>
+                    </div>
 
 
                     <button class="btn btn-success w-100" type="submit">Save</button>

@@ -77,13 +77,13 @@ public class BranchController : Controller
         //  Use string.IsNullOrWhiteSpace to check for empty search
         if (string.IsNullOrWhiteSpace(searchCode))
         {
-            ViewData["Error"] = "Field cannot be empty";
+            ViewData["Error"] = "Type a Branch Code and hit Search Branch";
             return View();
         }
 
         int currentUserId = 2;
         //  Pass the string searchCode to the service
-        var result = await _branchService.GetByBranchCodeAsync(searchCode, currentUserId);
+        var result = await _branchService.SearchBranchByCodeAsync(searchCode, currentUserId);
 
 
         if (!result.IsSuccess)

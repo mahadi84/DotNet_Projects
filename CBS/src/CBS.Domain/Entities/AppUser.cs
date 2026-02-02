@@ -12,7 +12,7 @@ public class AppUser
     public string Username { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
     public UserRole Role { get; private set; } = UserRole.Maker;
-    public string BranchCode { get; private set; }
+    public int? BranchId { get; private set; }
 
     public int FailedAttempts { get; private set; } = 0;
     public DateTime? LockUntil { get; private set; }
@@ -21,20 +21,30 @@ public class AppUser
     public bool IsActive { get; private set; } = true;
     public DateTime? LastLogin { get; private set; }
 
+    public int CreatedBy { get; set; }
+    public int ApprovedBy { get; set; }
+    public int? UpdatedBy { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime? UpdatedAt { get; set; }
+
+
+
+
+
     // Create user with domain validation (single source of truth)
-    public static AppUser Create(string username, string passwordHash, UserRole role, string branchCode)
+    public static AppUser Create(string username, string passwordHash, UserRole role, int branchId)
     {
         if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
         if (username.Length < 3 || username.Length > 50) throw new Exception("Username must be 3-50 characters.");
         if (string.IsNullOrWhiteSpace(passwordHash)) throw new Exception("Password hash is missing.");
-        if (branchCode == null) throw new Exception("BranchId is required.");
+        if (branchId == null) throw new Exception("BranchId is required.");
 
         return new AppUser
         {
             Username = username.Trim(),
             PasswordHash = passwordHash,
             Role = role,
-            BranchCode = branchCode,
+            BranchId = branchId,
             FailedAttempts = 0,
             LockUntil = null,
             IsLocked = false,
@@ -44,16 +54,16 @@ public class AppUser
     }
 
     // Update general info; password hash optional
-    public void UpdateGeneralInfo(string username, UserRole role, string  branchCode, bool isActive, string? newPasswordHash = null)
+    public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive, string? newPasswordHash = null)
     {
         if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
         if (username.Length < 3 || username.Length > 50) throw new Exception("Username must be 3-50 characters.");
-        if (branchCode == null) throw new Exception("BranchId is required.");
+        if (branchId == null) throw new Exception("BranchId is required.");
 
         Username = username.Trim();
         Role = role;
         IsActive = isActive;
-        BranchCode = branchCode;
+        BranchId = branchId;
         IsActive = isActive;
 
         if (!string.IsNullOrWhiteSpace(newPasswordHash))

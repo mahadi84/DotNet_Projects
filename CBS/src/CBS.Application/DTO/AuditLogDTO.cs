@@ -6,7 +6,7 @@ namespace CBS.Application.DTO;
 
 
 public record AuditLogCreateDTO(
-    [Required(ErrorMessage = "Branch ID Required")]
+    [Required(ErrorMessage = "Branch Code Required")]
     string BranchCode,
 
     [Required(ErrorMessage = "User ID Required")]
@@ -50,7 +50,7 @@ public record AuditReportViewDTO(
 
 // Search AuditLogs than Show(with pagination)
 public record AuditReportFilterDTO(
-    string? BranchCode,    // ব্রাঞ্চ কোড দিয়ে সার্চ
+   string? BranchCode,    // ব্রাঞ্চ কোড দিয়ে সার্চ
     int? CreatedBy,        // নির্দিষ্ট ইউজার দিয়ে সার্চ
     //int? UpdatedBy,        // নির্দিষ্ট ইউজার দিয়ে সার্চ
     //int? ApprovedBy,       // নির্দিষ্ট ইউজার দিয়ে সার্চ

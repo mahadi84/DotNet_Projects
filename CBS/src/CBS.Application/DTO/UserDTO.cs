@@ -24,9 +24,11 @@ public record UserCreateDTO(
        [Required]
         UserRole Role,
 
-       [Required(ErrorMessage ="Branch Code Required")]
-       [RegularExpression(@"^\d{3,5}$", ErrorMessage = "Branch Code, Only 3-5 digits allowed")]
-        string BranchCode
+      [Required(ErrorMessage = "Branch ID Required")]
+      [RegularExpression(@"^[1-9]\d*$", ErrorMessage = "Must be a positive number")]
+      int BranchId
+    
+       
 
    );
 
@@ -53,29 +55,103 @@ public record UserResponseDTO(
 public class UserSearchDTO
 {
     public int Id { get; set; }
-    public string Username { get; set; } = "";
+    public string Username { get; set; }
     public UserRole Role { get; set; }
+    public int BranchId { get; set; }
     public string BranchCode { get; set; }
+    public string BranchName { get; set; }
     public int FailedAttempts { get; set; }
     public DateTime? LockUntil { get; set; }
     public bool IsLocked { get; set; }
     public bool IsActive { get; set; }
     public DateTime? LastLogin { get; set; }
+    public int CreatedBy { get; set; }
+    public int ApprovedBy { get; set; }
+    public int? UpdatedBy { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime? UpdatedAt { get; set; }
 }
 
 
 
 
-public record UserUpdateDTO(
-    [Required] int Id,
-    [Required, StringLength(50, MinimumLength = 3)] string Username,
-    [Required] UserRole Role,
-    [Required, StringLength(50, MinimumLength = 3)] string BranchCode,
-    [Required] bool IsActive,
 
-    // optional password reset by admin
-    [StringLength(100, MinimumLength = 6)] string? NewPassword
-);
+public class UserUpdateDTO
+{
+    [Required]
+    public int Id { get; set; }
+
+    [Required(ErrorMessage = "Username is required")]
+    [StringLength(50, MinimumLength = 3)]
+    public string Username { get; set; }
+
+    [Required(ErrorMessage = "Role is required")]
+    public UserRole Role { get; set; }
+
+    [Required(ErrorMessage = "Branch ID Required")]
+    [RegularExpression(@"^[1-9]\d*$", ErrorMessage = "Must be a positive number")]
+    public int BranchId { get; set; }
+
+
+    public string BranchCode { get; set; }
+
+
+
+    public bool IsActive { get; set; }
+
+    public bool IsLocked { get; set; }
+
+    public int FailedAttempts { get; set; }
+
+    // Password is usually optional in an Update DTO
+    [DataType(DataType.Password)]
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
+    public string? NewPassword { get; set; }
+
+    // Auditing Fields (Usually Read-Only in the UI)
+    public int CreatedBy { get; set; }
+
+    public int ApprovedBy { get; set; }
+
+    public int? UpdatedBy { get; set; }
+
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd HH:mm}")]
+    public DateTime CreatedAt { get; set; }
+
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd HH:mm}")]
+    public DateTime? UpdatedAt { get; set; }
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+public class GetAllUsersIdAndNameDTO
+{
+    public int Id { get; set; }
+    public string UserName { get; set; }
+
+    // Constructor with parameters
+    public GetAllUsersIdAndNameDTO(int userId, string userName)
+    {
+        Id = userId;
+        UserName = UserName;
+    }
+}
+
+
+
+
+
+
 
 
 
@@ -94,7 +170,7 @@ public record LoginResultDTO(
     int UserId,
     string Username,
     UserRole Role,
-    string BranchCode,
+    int BranchId,
     bool IsLocked,
     DateTime? LockUntil,
     string Message
