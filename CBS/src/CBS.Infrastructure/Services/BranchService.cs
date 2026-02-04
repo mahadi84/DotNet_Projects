@@ -322,14 +322,14 @@ public class BranchService : IBranchService
 
             if (branches == null || !branches.Any())
             {
-                return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("No Branch Found for dropdown");
+                return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("No Branch Found");
             }
 
-            return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Success(branches, "Branches found");
+            return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Success(branches);
         }
         catch (Exception ex)
         {
-            return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("Database Error: " + ex.Message);
+            return Result<IEnumerable<GetAllBranchNameAndCodeDTO>>.Failure("Database Error in GetAllBranchNameAndCodeAsync: " + ex.Message);
         }
     }
 

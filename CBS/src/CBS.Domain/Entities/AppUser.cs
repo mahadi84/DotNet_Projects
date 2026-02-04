@@ -23,9 +23,10 @@ public class AppUser
 
     public int CreatedBy { get; set; }
     public int ApprovedBy { get; set; }
-    public int? UpdatedBy { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-    public DateTime? UpdatedAt { get; set; }
+    public int? UpdatedBy { get; set; } = 0;
+    public int RowVersion { get; private set; }
+    public DateTime CreatedAt { get; private set; } = DateTime.Now;
+    public DateTime? UpdatedAt { get; private set; }
 
 
 
@@ -49,26 +50,36 @@ public class AppUser
             LockUntil = null,
             IsLocked = false,
             IsActive = true,
-            LastLogin = null
+            LastLogin = null,
+            RowVersion =1,
         };
     }
 
     // Update general info; password hash optional
-    public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive, string? newPasswordHash = null)
+    public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive, bool isLocked, int rowVersion, int updatedBy)
+    //public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive,  int RowVersion, string? newPasswordHash = null)
     {
         if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
-        if (username.Length < 3 || username.Length > 50) throw new Exception("Username must be 3-50 characters.");
+        if (username.Length < 5 || username.Length > 50) throw new Exception("Username must be 5-50 characters.");
         if (branchId == null) throw new Exception("BranchId is required.");
+        if (RowVersion == null) throw new Exception("RowVersion is missing");
 
         Username = username.Trim();
         Role = role;
         IsActive = isActive;
         BranchId = branchId;
-        IsActive = isActive;
+        IsLocked = isLocked;
+        RowVersion = rowVersion + 1;
+        UpdatedBy = updatedBy;
+        UpdatedAt = DateTime.Now;
 
-        if (!string.IsNullOrWhiteSpace(newPasswordHash))
-            PasswordHash = newPasswordHash;
+        //if (!string.IsNullOrWhiteSpace(newPasswordHash))
+        //    PasswordHash = newPasswordHash;
     }
+
+
+
+
 
     // Called when password is wrong
     public void RegisterFailedLogin(int maxAttempts, TimeSpan lockDuration, DateTime nowUtc)
@@ -82,6 +93,10 @@ public class AppUser
             LockUntil = nowUtc.Add(lockDuration);
         }
     }
+
+
+
+
 
     // Called when login successful
     public void RegisterSuccessfulLogin(DateTime nowUtc)

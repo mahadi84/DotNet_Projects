@@ -8,15 +8,15 @@ using QuestPDF.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 
-// Dependancy Injection from CBS.Infrastructure.AddToRoute for MySQL and Migration
+// Dependancy Injection from CBS.Infrastructure.AddToRoute for MySQL and Table-Migration(dbup-mysql)
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Interface এবং এর Implementation ক্লাস রেজিস্টার করা
+// Interface(located in app Layer), Implementation(Locted in infras. Layer)
 builder.Services.AddScoped<IBranchService, BranchService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-
+//must add to use QuestPDF
 QuestPDF.Settings.License = LicenseType.Community;
 
 // Add services to the container.
@@ -29,7 +29,7 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // The default HSTS value is 30 days. 
     app.UseHsts();
 }
 

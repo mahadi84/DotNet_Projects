@@ -13,7 +13,7 @@ namespace CBS.Application.DTO;
 
 
 public record UserCreateDTO(
-        [Required(ErrorMessage ="Branch Name Required")]
+        [Required(ErrorMessage ="User Name Required")]
         [RegularExpression(@"^[a-zA-Z0-9]{5,50}$", ErrorMessage = "Username must be 5-50 characters long and contain only letters and numbers.")]
         string Username,
 
@@ -24,7 +24,7 @@ public record UserCreateDTO(
        [Required]
         UserRole Role,
 
-      [Required(ErrorMessage = "Branch ID Required")]
+      [Required(ErrorMessage = "Branch Code Required")]
       [RegularExpression(@"^[1-9]\d*$", ErrorMessage = "Must be a positive number")]
       int BranchId
     
@@ -35,7 +35,7 @@ public record UserCreateDTO(
 
 
 
-
+//Return newly created data to show in the view
 public record UserResponseDTO(
     int Id,
     string Username,
@@ -51,7 +51,7 @@ public record UserResponseDTO(
 
 
 
-
+//Search first
 public class UserSearchDTO
 {
     public int Id { get; set; }
@@ -68,6 +68,7 @@ public class UserSearchDTO
     public int CreatedBy { get; set; }
     public int ApprovedBy { get; set; }
     public int? UpdatedBy { get; set; }
+    public int RowVersion { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? UpdatedAt { get; set; }
 }
@@ -75,7 +76,7 @@ public class UserSearchDTO
 
 
 
-
+//and show searched data in the edit-form to validate submission
 public class UserUpdateDTO
 {
     [Required]
@@ -93,7 +94,7 @@ public class UserUpdateDTO
     public int BranchId { get; set; }
 
 
-    public string BranchCode { get; set; }
+    public string? BranchCode { get; set; }
 
 
 
@@ -103,10 +104,6 @@ public class UserUpdateDTO
 
     public int FailedAttempts { get; set; }
 
-    // Password is usually optional in an Update DTO
-    [DataType(DataType.Password)]
-    [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
-    public string? NewPassword { get; set; }
 
     // Auditing Fields (Usually Read-Only in the UI)
     public int CreatedBy { get; set; }
@@ -114,6 +111,8 @@ public class UserUpdateDTO
     public int ApprovedBy { get; set; }
 
     public int? UpdatedBy { get; set; }
+
+    public int RowVersion { get; set; }
 
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd HH:mm}")]
     public DateTime CreatedAt { get; set; }

@@ -11,7 +11,8 @@ CREATE TABLE users (
     last_login TIMESTAMP NULL,
     created_by INT NOT NULL,
     updated_by INT DEFAULT NULL, 
-    approved_by INT DEFAULT NULL, 
+    approved_by INT DEFAULT NULL,
+    row_version INT NOT NULL DEFAULT 1, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (branch_id) REFERENCES branches(id)

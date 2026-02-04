@@ -49,7 +49,7 @@ public class BranchController : Controller
             var vaultBalance = data.VaultBalance;
             
 
-            TempData["Success"] = $"{result.Message}, ID:{id}, Branch: {branchName} ({branchCode}), Vault Balance: ({vaultBalance})";
+            TempData["Success"] = $"{result.Message}, Branch: {branchName} ({branchCode}), Vault Balance: ({vaultBalance})";
 
             return RedirectToAction(nameof(Index));
         }

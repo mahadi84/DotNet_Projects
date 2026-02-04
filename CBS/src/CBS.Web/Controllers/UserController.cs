@@ -120,8 +120,8 @@ namespace CBS.Web.Controllers;
     {
 
         // Always load the branch list first to prevent NullReferenceException in the View
-        //await PopulateBranchList();
-        
+        await PopulateBranchList();
+
         if (string.IsNullOrWhiteSpace(username))
         {
             ViewData["Error"] = "Username cannot be empty.";
@@ -138,6 +138,7 @@ namespace CBS.Web.Controllers;
             return View();
         }
 
+        //manual mapping (map SearchDTO into UpdateDTO to show in editable field)
         var model = new UserUpdateDTO
         {
             Id = result.Data.Id,
@@ -153,29 +154,13 @@ namespace CBS.Web.Controllers;
             UpdatedBy = result.Data.UpdatedBy,
             CreatedAt = result.Data.CreatedAt,
             UpdatedAt = result.Data.UpdatedAt,
-            //NewPassword = null // যেহেতু এটি Class, তাই সব ফিল্ড সেট করা বাধ্যতামূলক নয়
+            RowVersion = result.Data.RowVersion
+            
         };
 
 
 
-        var branchResult = await _branchService.GetAllBranchNameAndCodeAsync();
-
-        if (branchResult != null && branchResult.IsSuccess)
-        {
-
-            var branchList = branchResult.Data.Select(b => new {
-                BranchId = b.BranchId,
-                DisplayText = $"{b.BranchName} ({b.BranchCode})"
-            }).ToList();
-            ViewBag.Branches = new SelectList(branchList, "BranchId", "DisplayText"); 
-        }
-        else
-        {
-            // Fallback to avoid crash if DB is down
-            ViewBag.Branches = new SelectList(new List<SelectListItem>());
-        }
-
-
+       
 
 
         return View(model);
@@ -184,25 +169,53 @@ namespace CBS.Web.Controllers;
 
 
 
-    //// Helper method to fetch branches and create the SelectList
-    //private async Task PopulateBranchList()
-    //{
-    //    // Fetch all branches from your Branch Service
-    //    var branchResult = await _branchService.GetAllBranchNameAndCodeAsync();
 
-    //    if (branchResult != null && branchResult.IsSuccess)
-    //    {
-    //        // Parameter 1: The data source
-    //        // Parameter 2: The "Value" (BranchId) sent to the Controller
-    //        // Parameter 3: The "Text" (BranchCode) shown to the User
-    //        ViewBag.BranchList = new SelectList(branchResult.Data, "BranchId", "BranchCode");
-    //    }
-    //    else
-    //    {
-    //        // Fallback to avoid crash if DB is down
-    //        ViewBag.BranchList = new SelectList(new List<SelectListItem>());
-    //    }
-    //}
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(UserUpdateDTO model)
+    {
+        if (!ModelState.IsValid)
+        {
+            // If validation fails, we must re-populate the branch list before returning the view
+            await PopulateBranchList();
+            return View("Manage", model);
+        }
+
+        int currentUserId = 2; // Usually from User.Identity
+        var result = await _userService.UpdateUserAsync(model, currentUserId);
+
+        if (result.IsSuccess)
+        {
+            TempData["Success"] = result.Message;
+            // Redirect to Manage with the username to show the updated data
+            return RedirectToAction("Manage", new { username = model.Username });
+        }
+        else
+        {
+            TempData["Error"] = result.Message;
+            await PopulateBranchList();
+            return View("Manage", model);
+        }
+    }
+
+    // Helper method to avoid code duplication
+    private async Task PopulateBranchList()
+    {
+        var branchResult = await _branchService.GetAllBranchNameAndCodeAsync();
+        if (branchResult != null && branchResult.IsSuccess)
+        {
+            var branchList = branchResult.Data.Select(b => new {
+                BranchId = b.BranchId,
+                DisplayText = $"{b.BranchName} ({b.BranchCode})"
+            }).ToList();
+            ViewBag.Branches = new SelectList(branchList, "BranchId", "DisplayText");
+        }
+    }
+
+
+
+
 
 
 

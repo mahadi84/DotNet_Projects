@@ -9,10 +9,10 @@ namespace CBS.Domain.Entities;
 
 public enum UserRole
 {
-    HoSuperAdmin,
-    BrAdmin,
-    Auditor,
-    Maker,
-    Checker
+    HoSuperAdmin = 1,
+    BrAdmin = 2,
+    Auditor = 3,
+    Maker = 4,
+    Checker = 5
 }
 
