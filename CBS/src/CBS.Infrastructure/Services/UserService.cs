@@ -40,8 +40,8 @@ public class UserService : IUserService
 
     public async Task<Result<UserResponseDTO>> CreateUserAsync(UserCreateDTO dto, int currentUserId)
     {
-        using var conn = await _dataSource.OpenConnectionAsync();
-        using var transaction = await conn.BeginTransactionAsync();
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await conn.BeginTransactionAsync();
 
         try
         {
@@ -51,38 +51,40 @@ public class UserService : IUserService
             if (exists > 0) return Result<UserResponseDTO>.Failure("Username already exists.");
 
             // 2) Hash password
-            string hashPass = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+            string hashPass = BCrypt.Net.BCrypt.HashPassword(dto.Password, workFactor: 12);
 
             // 3) Domain entity creation
             AppUser user;
             try
             {
-                user = AppUser.Create(dto.Username, hashPass, dto.Role, dto.BranchId);
+                user = AppUser.Create(dto.Username, hashPass, dto.Role, dto.BranchId, currentUserId);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return Result<UserResponseDTO>.Failure(ex.Message);
+                return Result<UserResponseDTO>.Failure("Invalid input.");
             }
 
             // 4) Insert user
             const string insertSql = @"
-            INSERT INTO users (username, password_hash, role, branch_id, failed_attempts, lock_until, is_locked, is_active, last_login, created_by, row_version)
-            VALUES (@Username, @PasswordHash, @Role, @BranchId, @FailedAttempts, @LockUntil, @IsLocked, @IsActive, @LastLogin, @CreatedBy, @RowVersion);
-            SELECT LAST_INSERT_ID();";
+                        INSERT INTO users
+                        (username, password_hash, role, branch_id, failed_attempts, lock_until, is_locked, is_active, last_login, created_by, row_version)
+                        VALUES
+                        (@Username, @PasswordHash, @Role, @BranchId, @FailedAttempts, @LockUntil, @IsLocked, @IsActive, @LastLogin, @CreatedBy, @RowVersion);
+                        SELECT LAST_INSERT_ID();";
 
-            int newId = await conn.ExecuteScalarAsync<int>(insertSql, new
+            var newId = await conn.ExecuteScalarAsync<int>(insertSql, new
             {
-                user.Username,
-                user.PasswordHash,
-                Role = user.Role.ToString(),
-                user.BranchId,
-                user.FailedAttempts,
-                user.LockUntil,
-                user.IsLocked,
-                user.IsActive,
-                user.LastLogin,
-                CreatedBy = currentUserId,
-                user.RowVersion
+                Username = user.Username,
+                PasswordHash = user.PasswordHash,
+                Role = user.Role.ToString(), // DB ENUM string
+                BranchId = user.BranchId,
+                FailedAttempts = user.FailedAttempts,
+                LockUntil = user.LockUntil,
+                IsLocked = user.IsLocked,
+                IsActive = user.IsActive,
+                LastLogin = user.LastLogin,
+                CreatedBy = user.CreatedBy,
+                RowVersion = user.RowVersion
             }, transaction);
 
             if (newId <= 0)
@@ -91,13 +93,10 @@ public class UserService : IUserService
                 return Result<UserResponseDTO>.Failure("Failed! User not created.");
             }
 
-            //  5) Fetch Branch Code (Separated Logic for Clarity) ---
-            string branchCode = "N/A";
-            if (user.BranchId.HasValue && user.BranchId > 0)
-            {
+            //  5) Fetch Branch Code
                 const string branchSql = "SELECT branch_code FROM branches WHERE id = @BranchId;";
-                branchCode = await conn.QueryFirstOrDefaultAsync<string>(branchSql, new { BranchId = user.BranchId }, transaction) ?? "N/A";
-            }
+                var branchCode = await conn.QueryFirstOrDefaultAsync<string>(branchSql, new { BranchId = user.BranchId }, transaction) ?? "N/A";
+
 
             // 6) Audit Log
             var auditDto = new AuditLogCreateDTO(
@@ -136,10 +135,10 @@ public class UserService : IUserService
 
             return Result<UserResponseDTO>.Success(response, "User created successfully.");
         }
-        catch (Exception ex)
+        catch (Exception )
         {
             await transaction.RollbackAsync();
-            return Result<UserResponseDTO>.Failure("Critical Error: " + ex.Message);
+            return Result<UserResponseDTO>.Failure("Database Error");
         }
     }
 
@@ -154,7 +153,7 @@ public class UserService : IUserService
 
     public async Task<Result<UserSearchDTO>> GetByUsernameAsync(string userName, int currentUserId)
     {
-        using var conn = await _dataSource.OpenConnectionAsync();
+        await using var conn = await _dataSource.OpenConnectionAsync();
         
         try
         {
@@ -179,43 +178,52 @@ public class UserService : IUserService
                              WHERE username = @userName";
 
             //<BranchSearchDTO>কি,কি অর্ডার (কাচ্চি বিরিয়ানি,মাছ)
-            var user = await conn.QueryFirstOrDefaultAsync<UserSearchDTO>(sql, new { UserName = userName.Trim() });
+            var row = await conn.QueryFirstOrDefaultAsync<UserSearchDTO>(sql, new { UserName = userName.Trim() });
 
-            if (user == null)
-            {
+            if (row == null)
                 return Result<UserSearchDTO>.Failure("Branch not found");
-            }
 
-            // --- Find branch code with branch id---
-            string branchCodeForLog = "N/A"; 
+            // Branch info
+            const string branchSql = "SELECT branch_code AS BranchCode, branch_name AS BranchName FROM branches WHERE id = @BranchId;";
+            var br = await conn.QueryFirstOrDefaultAsync<dynamic>(branchSql, new { BranchId = row.BranchId });
 
-            if (user.BranchId != null && user.BranchId > 0)
+
+            //// Map to UserSearchDTO
+            var dto = new UserSearchDTO
             {
-                const string branchSql = "SELECT branch_code AS branchCode, branch_name AS branchName FROM branches WHERE id = @BranchId;";
-                var result = await conn.QueryFirstOrDefaultAsync<dynamic>(branchSql, new { BranchId = user.BranchId });
-
-                if (result != null)
-                {
-                    user.BranchCode = result.branchCode; //set branch code and name to user dto
-                    user.BranchName = result.branchName; //set branch code and name to user dto
-
-                    branchCodeForLog = result.branchCode;
-                }
-            }
+                Id = row.Id,
+                Username = row.Username,
+                //Role = Enum.TryParse<UserRole>(row.Role, out var r) ? r : UserRole.Maker,
+                Role = row.Role,
+                BranchId = row.BranchId,
+                BranchCode = br?.BranchCode ?? "N/A",
+                BranchName = br?.BranchName ?? "",
+                FailedAttempts = row.FailedAttempts,
+                LockUntil = row.LockUntil,
+                IsLocked = row.IsLocked,
+                IsActive = row.IsActive,
+                LastLogin = row.LastLogin,
+                CreatedBy = row.CreatedBy,
+                ApprovedBy = row.ApprovedBy ?? 0,
+                UpdatedBy = row.UpdatedBy,
+                RowVersion = row.RowVersion,
+                CreatedAt = row.CreatedAt,
+                UpdatedAt = row.UpdatedAt
+            };
 
 
             // 3. audit log create(new data save so OldValue=null) 
             var auditDto = new AuditLogCreateDTO(
-                BranchCode: branchCodeForLog,
-                CreatedBy: user.Id,
-                UpdatedBy: user.UpdatedBy,
-                ApprovedBy: user.ApprovedBy,
-                TableName: "users",
-                Action: "READ",
-                OldValue: $"Username:{user.Username}, Role:{user.Role}, BranchCode:{branchCodeForLog}, Active:{user.IsActive}",
-                NewValue: $"Read By:{currentUserId}",
-                Description: "Branch Info. Searched by User."
-            );
+               BranchCode: dto.BranchCode,
+               CreatedBy: row.CreatedBy,
+               UpdatedBy: null,
+               ApprovedBy: null,
+               TableName: "users",
+               Action: "READ",
+               OldValue: $"Username:{dto.Username}, Role:{dto.Role}, BranchCode:{dto.BranchCode}, Active:{dto.IsActive}",
+               NewValue: $"ReadBy:{currentUserId}",
+               Description: "User searched by username"
+           );
 
             var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
 
@@ -225,11 +233,11 @@ public class UserService : IUserService
             }
 
            
-            return Result<UserSearchDTO>.Success(user); // Got fish?! pack and send(Result<>,Wrapper Class)
+            return Result<UserSearchDTO>.Success(dto); // Got fish?! pack and send(Result<>,Wrapper Class)
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result<UserSearchDTO>.Failure("Database Error in GetByUsernameAsync : " + ex.Message);
+            return Result<UserSearchDTO>.Failure("Database Error ");
         }
 
     }
@@ -300,12 +308,9 @@ public class UserService : IUserService
             }
 
             //Fetch Branch Code(Separated Logic for Clarity) ---
-           string branchCode = "N/A";
-            if (dto.BranchId != null && dto.BranchId > 0)
-            {
                 const string branchSql = "SELECT branch_code FROM branches WHERE id = @BranchId;";
-                branchCode = await conn.QueryFirstOrDefaultAsync<string>(branchSql, new { BranchId = dto.BranchId }, transaction) ?? "N/A";
-            }
+                var branchCode = await conn.QueryFirstOrDefaultAsync<string>(branchSql, new { BranchId = dto.BranchId }, transaction) ?? "N/A";
+       
 
             // Create Audit Log (Pass the transaction to the audit service if supported)
             var auditDto = new AuditLogCreateDTO(

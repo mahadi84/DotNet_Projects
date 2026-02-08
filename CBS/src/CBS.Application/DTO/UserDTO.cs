@@ -14,7 +14,7 @@ namespace CBS.Application.DTO;
 
 public record UserCreateDTO(
         [Required(ErrorMessage ="User Name Required")]
-        [RegularExpression(@"^[a-zA-Z0-9]{5,50}$", ErrorMessage = "Username must be 5-50 characters long and contain only letters and numbers.")]
+        [RegularExpression(@"^[a-zA-Z0-9]{5,15}$", ErrorMessage = "Username must be 5-15 characters long and contain only letters and numbers.")]
         string Username,
 
         [Required(ErrorMessage ="Password is Required")]
@@ -66,7 +66,7 @@ public class UserSearchDTO
     public bool IsActive { get; set; }
     public DateTime? LastLogin { get; set; }
     public int CreatedBy { get; set; }
-    public int ApprovedBy { get; set; }
+    public int? ApprovedBy { get; set; }
     public int? UpdatedBy { get; set; }
     public int RowVersion { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -83,7 +83,7 @@ public class UserUpdateDTO
     public int Id { get; set; }
 
     [Required(ErrorMessage = "Username is required")]
-    [StringLength(50, MinimumLength = 3)]
+    [StringLength(50, MinimumLength = 5)]
     public string Username { get; set; }
 
     [Required(ErrorMessage = "Role is required")]

@@ -150,7 +150,7 @@ namespace CBS.Web.Controllers;
             IsLocked = result.Data.IsLocked,
             FailedAttempts = result.Data.FailedAttempts,
             CreatedBy = result.Data.CreatedBy,
-            ApprovedBy = result.Data.ApprovedBy,
+            ApprovedBy = result.Data.ApprovedBy ?? 0,
             UpdatedBy = result.Data.UpdatedBy,
             CreatedAt = result.Data.CreatedAt,
             UpdatedAt = result.Data.UpdatedAt,

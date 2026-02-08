@@ -8,11 +8,11 @@ namespace CBS.Domain.Entities;
 
 public class AppUser
 {
-    public int Id { get; set; }
+    public int Id { get; private set; }
     public string Username { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
     public UserRole Role { get; private set; } = UserRole.Maker;
-    public int? BranchId { get; private set; }
+    public int BranchId { get; private set; }
 
     public int FailedAttempts { get; private set; } = 0;
     public DateTime? LockUntil { get; private set; }
@@ -21,28 +21,30 @@ public class AppUser
     public bool IsActive { get; private set; } = true;
     public DateTime? LastLogin { get; private set; }
 
-    public int CreatedBy { get; set; }
-    public int ApprovedBy { get; set; }
-    public int? UpdatedBy { get; set; } = 0;
-    public int RowVersion { get; private set; }
-    public DateTime CreatedAt { get; private set; } = DateTime.Now;
+    public int CreatedBy { get; private set; }
+    public int? UpdatedBy { get; private set; }
+    public int? ApprovedBy { get; private set; }
+
+    public int RowVersion { get; private set; } = 1;
+    public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; private set; }
+
+    private AppUser() { }
 
 
 
 
 
     // Create user with domain validation (single source of truth)
-    public static AppUser Create(string username, string passwordHash, UserRole role, int branchId)
+    public static AppUser Create(string username, string passwordHash, UserRole role, int branchId, int createdBy)
     {
-        if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
-        if (username.Length < 3 || username.Length > 50) throw new Exception("Username must be 3-50 characters.");
+        username= ValidateUsername(username);
         if (string.IsNullOrWhiteSpace(passwordHash)) throw new Exception("Password hash is missing.");
-        if (branchId == null) throw new Exception("BranchId is required.");
+        if (branchId <= 0) throw new Exception("BranchId is required.");
 
         return new AppUser
         {
-            Username = username.Trim(),
+            Username = username,
             PasswordHash = passwordHash,
             Role = role,
             BranchId = branchId,
@@ -51,7 +53,10 @@ public class AppUser
             IsLocked = false,
             IsActive = true,
             LastLogin = null,
-            RowVersion =1,
+            CreatedBy = createdBy,
+            RowVersion = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = null,
         };
     }
 
@@ -59,12 +64,11 @@ public class AppUser
     public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive, bool isLocked, int rowVersion, int updatedBy)
     //public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive,  int RowVersion, string? newPasswordHash = null)
     {
-        if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
-        if (username.Length < 5 || username.Length > 50) throw new Exception("Username must be 5-50 characters.");
-        if (branchId == null) throw new Exception("BranchId is required.");
-        if (RowVersion == null) throw new Exception("RowVersion is missing");
+        username = ValidateUsername(username);
+        if (branchId <= 0) throw new Exception("BranchId is required.");
+        if (RowVersion <= 0) throw new Exception("RowVersion is missing");
 
-        Username = username.Trim();
+        Username = username;
         Role = role;
         IsActive = isActive;
         BranchId = branchId;
@@ -117,6 +121,22 @@ public class AppUser
 
 
 
+
+    private static string ValidateUsername(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
+
+        username = username.Trim();
+
+        if (username.Length < 5 || username.Length > 15)
+            throw new Exception("Username must be 5-15 characters.");
+
+        // Optional: enforce same rule as DTO regex (letters+numbers only)
+        // if (!System.Text.RegularExpressions.Regex.IsMatch(username, "^[a-zA-Z0-9]{5,50}$"))
+        //     throw new Exception("Username format invalid.");
+
+        return username;
+    }
 
 
 
