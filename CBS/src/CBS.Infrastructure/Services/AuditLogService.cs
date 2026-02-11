@@ -4,6 +4,7 @@ using CBS.Domain.Common;
 using Dapper;
 using MySqlConnector;
 using QuestPDF.Fluent;
+using System.Data.Common;
 using System.Text;
 
 namespace CBS.Infrastructure.Services;
@@ -23,20 +24,21 @@ public class AuditLogService : IAuditLogService
 
 
 
-    public async Task<Result<bool>> CreateAuditLogAsync(AuditLogCreateDTO dto)
+    public async Task<Result<bool>> CreateAuditLogAsync(AuditLogCreateDTO dto, DbConnection? connection = null,  DbTransaction? transaction = null)
     {
-        try
-        {
-            using var connection = await _dataSource.OpenConnectionAsync();
 
-            
+        bool isInternalConnection = connection == null;
+        DbConnection conn = connection ?? await _dataSource.OpenConnectionAsync();
+
+        try
+        {           
             string sql = @"INSERT INTO audit_logs 
                           (branch_code, created_by, updated_by, approved_by, table_name, action, old_value, new_value, description, created_at) 
                           VALUES 
                           (@BranchCode, @CreatedBy, @UpdatedBy, @ApprovedBy, @TableName, @Action, @OldValue, @NewValue, @Description, NOW())";
 
             // Dapper auto mapping
-            var result = await connection.ExecuteAsync(sql, dto);
+            var result = await connection.ExecuteAsync(sql, dto, transaction);
 
             if (result > 0)
             {
@@ -45,10 +47,18 @@ public class AuditLogService : IAuditLogService
 
             return Result<bool>.Failure("Failed to insert audit log");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // in Banking Logiin (Serilog/NLog) is must
             return Result<bool>.Failure("Database Error");
+        }
+        finally
+        {
+            // if this method open connection than this part will close the conn
+            if (isInternalConnection)
+            {
+                await conn.DisposeAsync();
+            }
         }
     }
 
@@ -112,19 +122,19 @@ public class AuditLogService : IAuditLogService
 
             // ✅ this data will show in the view
             string selectSql = $@"
-                            SELECT 
-                                al.id,
-                                al.branch_code as BranchCode, 
-                                al.created_by as CreatedBy,                                
-                                al.table_name as TableName,
-                                al.action as Action,
-                                al.old_value as OldValue,
-                                al.new_value as NewValue,
-                                al.description as Description,
-                                al.created_at as CreatedAt
-                            {sqlBody} 
-                            ORDER BY al.id DESC 
-                            LIMIT @Offset, @PageSize";
+                                SELECT 
+                                    al.id,
+                                    al.branch_code as BranchCode, 
+                                    al.created_by as CreatedBy,                                
+                                    al.table_name as TableName,
+                                    al.action as Action,
+                                    al.old_value as OldValue,
+                                    al.new_value as NewValue,
+                                    al.description as Description,
+                                    al.created_at as CreatedAt
+                                {sqlBody} 
+                                ORDER BY al.id DESC 
+                                LIMIT @Offset, @PageSize";
 
             parameters.Add("Offset", (filter.PageNumber - 1) * filter.PageSize);
             parameters.Add("PageSize", filter.PageSize);

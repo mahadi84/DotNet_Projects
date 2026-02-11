@@ -14,7 +14,7 @@ namespace CBS.Application.DTO;
 
 public record UserCreateDTO(
         [Required(ErrorMessage ="User Name Required")]
-        [RegularExpression(@"^[a-zA-Z0-9]{5,15}$", ErrorMessage = "Username must be 5-15 characters long and contain only letters and numbers.")]
+        [RegularExpression(@"^[a-z0-9]{5,15}$", ErrorMessage = "Username must be 5-15 characters long and contain only letters,numbers and lowercase.")]
         string Username,
 
         [Required(ErrorMessage ="Password is Required")]

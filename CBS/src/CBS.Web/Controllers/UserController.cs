@@ -36,11 +36,11 @@ namespace CBS.Web.Controllers;
         if (!result.IsSuccess)
         {
             TempData["Error"] = result.Message;
-            return View(new UserCreateDTO("", "", UserRole.Maker, 0));
+            return View(new UserCreateDTO("", "", UserRole.Checker, 0));
         }
 
 
-        // ড্রপডাউনের জন্য নাম এবং কোড কনক্যাটিনেট করা
+        //selection dropdown
         var branchList = result.Data.Select(b => new {
             BranchId = b.BranchId,
             DisplayText = $"{b.BranchName} ({b.BranchCode})"
@@ -48,7 +48,7 @@ namespace CBS.Web.Controllers;
 
         ViewBag.Branches = new SelectList(branchList, "BranchId", "DisplayText");
 
-        return View(new UserCreateDTO("", "", UserRole.Maker, 0));
+        return View(new UserCreateDTO("", "", UserRole.Checker, 0));
     }
 
 
@@ -83,7 +83,7 @@ namespace CBS.Web.Controllers;
     [HttpGet]
     public async Task<IActionResult> ShowUserInfo(string? username)
     {
-        // ১. ইউজারনেম চেক
+        //username filed not empty
         if (string.IsNullOrWhiteSpace(username))
         {
             ViewData["Error"] = "Please provide a username to search.";
@@ -92,16 +92,15 @@ namespace CBS.Web.Controllers;
 
         int currentUserId = 2; // সাধারণত এটি User.Identity থেকে আসে
 
-        // ২. সার্ভিস থেকে ডেটা আনা
+        // get data from userService
         var result = await _userService.GetByUsernameAsync(username.Trim(), currentUserId);
 
         if (!result.IsSuccess)
         {
             ViewData["Error"] = result.Message;
-            return View(); // মডেল নাল থাকবে, তাই ভিউতে 'Not Found' মেসেজ দেখাবে
+            return View(); // If model null 'Not Found'
         }
 
-        // ৩. মডেল রিটার্ন করা (সরাসরি result.Data ও পাঠানো যায়)
         return View(result.Data);
     }
 
@@ -199,7 +198,7 @@ namespace CBS.Web.Controllers;
         }
     }
 
-    // Helper method to avoid code duplication
+    // selection dropdown-Helper method to avoid code duplication
     private async Task PopulateBranchList()
     {
         var branchResult = await _branchService.GetAllBranchNameAndCodeAsync();

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CBS.Domain.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,7 @@ public class AppUser
     public int Id { get; private set; }
     public string Username { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
-    public UserRole Role { get; private set; } = UserRole.Maker;
+    public UserRole Role { get; private set; } = UserRole.Checker;
     public int BranchId { get; private set; }
 
     public int FailedAttempts { get; private set; } = 0;
@@ -50,8 +51,8 @@ public class AppUser
             BranchId = branchId,
             FailedAttempts = 0,
             LockUntil = null,
-            IsLocked = false,
-            IsActive = true,
+            IsLocked  = false,
+            IsActive  = true,
             LastLogin = null,
             CreatedBy = createdBy,
             RowVersion = 1,
@@ -60,16 +61,32 @@ public class AppUser
         };
     }
 
+
+
+ // a static method to reconstruct the object or you map it
+    public static AppUser Reconstruct(int id, string username, UserRole role, int branchId, bool isActive, bool isLocked, int rowVersion)
+    {
+        return new AppUser
+        {
+            Id = id,
+            Username = username,
+            Role = role,
+            BranchId = branchId,
+            IsActive = isActive,
+            IsLocked = isLocked,
+            RowVersion = rowVersion
+        };
+    }
+
     // Update general info; password hash optional
     public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive, bool isLocked, int rowVersion, int updatedBy)
-    //public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive,  int RowVersion, string? newPasswordHash = null)
     {
         username = ValidateUsername(username);
         if (branchId <= 0) throw new Exception("BranchId is required.");
         if (RowVersion <= 0) throw new Exception("RowVersion is missing");
 
         Username = username;
-        Role = role;
+        Role     = role;
         IsActive = isActive;
         BranchId = branchId;
         IsLocked = isLocked;
@@ -106,7 +123,7 @@ public class AppUser
     public void RegisterSuccessfulLogin(DateTime nowUtc)
     {
         FailedAttempts = 0;
-        IsLocked = false;
+        IsLocked  = false;
         LockUntil = null;
         LastLogin = nowUtc;
     }
@@ -115,7 +132,7 @@ public class AppUser
     public void Unlock()
     {
         FailedAttempts = 0;
-        IsLocked = false;
+        IsLocked  = false;
         LockUntil = null;
     }
 
@@ -126,17 +143,20 @@ public class AppUser
     {
         if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
 
-        username = username.Trim();
 
-        if (username.Length < 5 || username.Length > 15)
+        //Normalization: Trim whitespace and convert to Lower Case to prevent duplicates
+        var normalized_username = username.Trim().ToLowerInvariant();
+
+        if (normalized_username.Length < 5 || normalized_username.Length > 15)
             throw new Exception("Username must be 5-15 characters.");
 
         // Optional: enforce same rule as DTO regex (letters+numbers only)
-        // if (!System.Text.RegularExpressions.Regex.IsMatch(username, "^[a-zA-Z0-9]{5,50}$"))
-        //     throw new Exception("Username format invalid.");
+        if (!System.Text.RegularExpressions.Regex.IsMatch(normalized_username, "^[a-z0-9]{5,15}$"))
+            throw new Exception("Username format invalid.");
 
-        return username;
+        return normalized_username;
     }
+
 
 
 

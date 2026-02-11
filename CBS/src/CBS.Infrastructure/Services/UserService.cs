@@ -38,69 +38,60 @@ public class UserService : IUserService
 
 
 
+    // ---------------------------------- CREATE ------------------------------
+
+
     public async Task<Result<UserResponseDTO>> CreateUserAsync(UserCreateDTO dto, int currentUserId)
     {
+        // 1. Domain-level validation and normalization are recommended here.
+        AppUser user;
+        try
+        {
+            // password hash
+            string hashPass = BCrypt.Net.BCrypt.HashPassword(dto.Password, workFactor: 12);
+
+            user = AppUser.Create(dto.Username, hashPass, dto.Role, dto.BranchId, currentUserId);
+
+
+        }
+        catch (Exception ex)
+        {
+            return Result<UserResponseDTO>.Failure(ex.Message);
+        }
+
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var transaction = await conn.BeginTransactionAsync();
 
         try
         {
-            // 1) Duplicate username check (Trim used for safety)
+            // 2. Duplicate username check (A Unique Index must exist in the database for absolute safety).
             const string dupSql = "SELECT COUNT(1) FROM users WHERE username = @Username;";
-            int exists = await conn.ExecuteScalarAsync<int>(dupSql, new { Username = dto.Username.Trim() }, transaction);
+            int exists = await conn.ExecuteScalarAsync<int>(dupSql, new { Username = user.Username }, transaction);
             if (exists > 0) return Result<UserResponseDTO>.Failure("Username already exists.");
 
-            // 2) Hash password
-            string hashPass = BCrypt.Net.BCrypt.HashPassword(dto.Password, workFactor: 12);
-
-            // 3) Domain entity creation
-            AppUser user;
-            try
-            {
-                user = AppUser.Create(dto.Username, hashPass, dto.Role, dto.BranchId, currentUserId);
-            }
-            catch (Exception)
-            {
-                return Result<UserResponseDTO>.Failure("Invalid input.");
-            }
-
-            // 4) Insert user
+            // 3. Insert query
             const string insertSql = @"
-                        INSERT INTO users
-                        (username, password_hash, role, branch_id, failed_attempts, lock_until, is_locked, is_active, last_login, created_by, row_version)
-                        VALUES
-                        (@Username, @PasswordHash, @Role, @BranchId, @FailedAttempts, @LockUntil, @IsLocked, @IsActive, @LastLogin, @CreatedBy, @RowVersion);
-                        SELECT LAST_INSERT_ID();";
+            INSERT INTO users (username, password_hash, role, branch_id, created_by, row_version, created_at)
+            VALUES (@Username, @PasswordHash, @Role, @BranchId, @CreatedBy, @RowVersion, @CreatedAt);
+            SELECT LAST_INSERT_ID();";
 
             var newId = await conn.ExecuteScalarAsync<int>(insertSql, new
             {
-                Username = user.Username,
-                PasswordHash = user.PasswordHash,
-                Role = user.Role.ToString(), // DB ENUM string
-                BranchId = user.BranchId,
-                FailedAttempts = user.FailedAttempts,
-                LockUntil = user.LockUntil,
-                IsLocked = user.IsLocked,
-                IsActive = user.IsActive,
-                LastLogin = user.LastLogin,
-                CreatedBy = user.CreatedBy,
-                RowVersion = user.RowVersion
+                user.Username,
+                user.PasswordHash,
+                Role = user.Role.ToString(),
+                user.BranchId,
+                user.CreatedBy,
+                user.RowVersion,
+                user.CreatedAt // Ensure this is coming from the Domain as UTC time
             }, transaction);
 
-            if (newId <= 0)
-            {
-                await transaction.RollbackAsync();
-                return Result<UserResponseDTO>.Failure("Failed! User not created.");
-            }
+            // 4. Audit logging (using the existing connection and transaction)
+            var branchSql = "SELECT branch_code FROM branches WHERE id = @BranchId;";
+            var branchCode = await conn.QueryFirstOrDefaultAsync<string>(branchSql, new { user.BranchId }, transaction) ?? "N/A";
 
-            //  5) Fetch Branch Code
-                const string branchSql = "SELECT branch_code FROM branches WHERE id = @BranchId;";
-                var branchCode = await conn.QueryFirstOrDefaultAsync<string>(branchSql, new { BranchId = user.BranchId }, transaction) ?? "N/A";
-
-
-            // 6) Audit Log
-            var auditDto = new AuditLogCreateDTO(
-                BranchCode: branchCode, // Using the fetched code
+            var auditRes = await _auditLogService.CreateAuditLogAsync(new AuditLogCreateDTO(
+               BranchCode: branchCode, // Using the fetched code
                 TableName: "users",
                 Action: "CREATE",
                 UpdatedBy: null,
@@ -109,9 +100,8 @@ public class UserService : IUserService
                 NewValue: $"Username:{user.Username}, Role:{user.Role}, Branch:{branchCode}",
                 Description: "New user created",
                 CreatedBy: currentUserId
-            );
+            ), conn, transaction);
 
-            var auditRes = await _auditLogService.CreateAuditLogAsync(auditDto);
             if (!auditRes.IsSuccess)
             {
                 await transaction.RollbackAsync();
@@ -135,10 +125,10 @@ public class UserService : IUserService
 
             return Result<UserResponseDTO>.Success(response, "User created successfully.");
         }
-        catch (Exception )
+        catch (Exception)
         {
             await transaction.RollbackAsync();
-            return Result<UserResponseDTO>.Failure("Database Error");
+            return Result<UserResponseDTO>.Failure("Database Error during user creation.");
         }
     }
 
@@ -149,198 +139,161 @@ public class UserService : IUserService
 
 
 
+
+
+
+    // ---------------------------------- SEARCH ------------------------------
 
 
     public async Task<Result<UserSearchDTO>> GetByUsernameAsync(string userName, int currentUserId)
     {
+        // 1. Guard Clause: Input validation
+        if (string.IsNullOrWhiteSpace(userName))
+            return Result<UserSearchDTO>.Failure("Username is required.");
+
         await using var conn = await _dataSource.OpenConnectionAsync();
-        
+
         try
         {
+            // 2. JOIN Query: Fetching User and Branch data in a single call (Best for performance)
+            const string sql = @"
+            SELECT 
+                u.id, u.username, u.role, u.branch_id AS BranchId, 
+                u.failed_attempts AS FailedAttempts, u.lock_until AS LockUntil, 
+                u.is_locked AS IsLocked, u.is_active AS IsActive, 
+                u.last_login AS LastLogin, u.created_by AS CreatedBy, 
+                u.approved_by AS ApprovedBy, u.updated_by AS UpdatedBy, 
+                u.created_at AS CreatedAt, u.updated_at AS UpdatedAt, 
+                u.row_version AS RowVersion,
+                b.branch_code AS BranchCode, b.branch_name AS BranchName
+            FROM users u
+            LEFT JOIN branches b ON u.branch_id = b.id
+            WHERE u.username = @UserName";
 
-            const string sql = @"SELECT 
-                                id AS Id, 
-                                username AS Username, 
-                                role AS Role, 
-                                branch_id AS BranchId, 
-                                failed_attempts AS FailedAttempts, 
-                                lock_until AS LockUntil, 
-                                is_locked AS IsLocked, 
-                                is_active AS IsActive, 
-                                last_login AS LastLogin,
-                                created_by AS CreatedBy,
-                                approved_by AS ApprovedBy,
-                                updated_by AS UpdatedBy,
-                                created_at AS CreatedAt,
-                                updated_at AS UpdatedAt,
-                                row_version AS RowVersion
-                             FROM users 
-                             WHERE username = @userName";
+            // Dapper automatically maps the result to UserSearchDTO properties
+            var dto = await conn.QueryFirstOrDefaultAsync<UserSearchDTO>(sql, new { UserName = userName.Trim().ToLowerInvariant() });
 
-            //<BranchSearchDTO>কি,কি অর্ডার (কাচ্চি বিরিয়ানি,মাছ)
-            var row = await conn.QueryFirstOrDefaultAsync<UserSearchDTO>(sql, new { UserName = userName.Trim() });
-
-            if (row == null)
-                return Result<UserSearchDTO>.Failure("Branch not found");
-
-            // Branch info
-            const string branchSql = "SELECT branch_code AS BranchCode, branch_name AS BranchName FROM branches WHERE id = @BranchId;";
-            var br = await conn.QueryFirstOrDefaultAsync<dynamic>(branchSql, new { BranchId = row.BranchId });
+            if (dto == null)
+                return Result<UserSearchDTO>.Failure("User not found.");
 
 
-            //// Map to UserSearchDTO
-            var dto = new UserSearchDTO
-            {
-                Id = row.Id,
-                Username = row.Username,
-                //Role = Enum.TryParse<UserRole>(row.Role, out var r) ? r : UserRole.Maker,
-                Role = row.Role,
-                BranchId = row.BranchId,
-                BranchCode = br?.BranchCode ?? "N/A",
-                BranchName = br?.BranchName ?? "",
-                FailedAttempts = row.FailedAttempts,
-                LockUntil = row.LockUntil,
-                IsLocked = row.IsLocked,
-                IsActive = row.IsActive,
-                LastLogin = row.LastLogin,
-                CreatedBy = row.CreatedBy,
-                ApprovedBy = row.ApprovedBy ?? 0,
-                UpdatedBy = row.UpdatedBy,
-                RowVersion = row.RowVersion,
-                CreatedAt = row.CreatedAt,
-                UpdatedAt = row.UpdatedAt
-            };
 
-
-            // 3. audit log create(new data save so OldValue=null) 
-            var auditDto = new AuditLogCreateDTO(
-               BranchCode: dto.BranchCode,
-               CreatedBy: row.CreatedBy,
-               UpdatedBy: null,
-               ApprovedBy: null,
-               TableName: "users",
-               Action: "READ",
-               OldValue: $"Username:{dto.Username}, Role:{dto.Role}, BranchCode:{dto.BranchCode}, Active:{dto.IsActive}",
-               NewValue: $"ReadBy:{currentUserId}",
-               Description: "User searched by username"
-           );
-
-            var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
-
-            if (!auditResult.IsSuccess)
-            {
-                return Result<UserSearchDTO>.Failure("Audit log failed. Transaction rolled back.");
-            }
-
-           
-            return Result<UserSearchDTO>.Success(dto); // Got fish?! pack and send(Result<>,Wrapper Class)
+            return Result<UserSearchDTO>.Success(dto);
         }
         catch (Exception)
         {
-            return Result<UserSearchDTO>.Failure("Database Error ");
+            // Actual exception 'ex.Message' should be logged internally (e.g., using Serilog or NLog)
+            return Result<UserSearchDTO>.Failure("An internal error occurred while searching for the user.");
         }
-
     }
 
 
 
 
-
-
-
-
+// ---------------------------------- UPDATE ------------------------------
 
     public async Task<Result<bool>> UpdateUserAsync(UserUpdateDTO dto, int currentUserId)
     {
-        using var conn = await _dataSource.OpenConnectionAsync();
-        using var transaction = conn.BeginTransaction(); // Start the transaction
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await conn.BeginTransactionAsync();
 
         try
         {
-            // Check if user exists (Get old data for auditing)
-            const string checkSql = "SELECT role, branch_id, is_active, is_locked, row_version FROM users WHERE id = @Id";
-            var user = await conn.QueryFirstOrDefaultAsync<AppUser>(checkSql, new { Id = dto.Id }, transaction);
+            // 1. Fetch current data with BranchCode for a complete Audit Trail
+            const string checkSql = @"
+            SELECT u.id, u.username, u.role, u.branch_id, u.is_active, u.is_locked, u.row_version, b.branch_code 
+            FROM users u
+            LEFT JOIN branches b ON u.branch_id = b.id
+            WHERE u.id = @Id";
 
-            if (user == null)
-            {
+            var oldData = await conn.QueryFirstOrDefaultAsync<dynamic>(checkSql, new { Id = dto.Id }, transaction);
+
+            if (oldData == null)
                 return Result<bool>.Failure("User not found.");
-            }
 
-            var OldValue = $"Role:{user.Role}, Branch:{user.BranchId}, Active:{user.IsActive}, Active:{user.IsLocked}";
+            // 2. Prepare OldValue snapshot (includes BranchCode for better auditing)
+            var oldValue = $"Role:{oldData.role}, Branch:{oldData.branch_code}, Active:{oldData.is_active}, Locked:{oldData.is_locked}, Version:{oldData.row_version}";
+
+            // 3. Apply Domain Logic and Concurrency Check
+            var userEntity = AppUser.Reconstruct(
+                (int)oldData.id, (string)oldData.username, (UserRole)Enum.Parse(typeof(UserRole), oldData.role),
+                (int)oldData.branch_id, (bool)oldData.is_active, (bool)oldData.is_locked, (int)oldData.row_version
+            );
 
             try
             {
-                user.UpdateGeneralInfo(dto.Username, dto.Role, dto.BranchId, dto.IsActive, dto.IsLocked, dto.RowVersion, currentUserId);
+                // Validates version and increments RowVersion inside this method
+                userEntity.UpdateGeneralInfo(dto.Username, dto.Role, dto.BranchId, dto.IsActive, dto.IsLocked, dto.RowVersion, currentUserId);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return Result<bool>.Failure(ex.Message);
             }
 
-            // Perform Update
+            // 4. Secure SQL Update with Optimistic Concurrency (WHERE row_version = @OldVersion)
             const string updateSql = @"
             UPDATE users SET 
-                role = Role,
+                role = @Role,
                 branch_id = @BranchId,
                 is_active = @IsActive,
                 is_locked = @IsLocked,
                 updated_by = @UpdatedBy,
                 updated_at = @UpdatedAt,
-                row_version = @RowVersion
-            WHERE id = @Id";
+                row_version = @NewRowVersion
+            WHERE id = @Id AND row_version = @OldRowVersion";
 
             var affectedRows = await conn.ExecuteAsync(updateSql, new
             {
-                Role = user.Role.ToString(),
-                user.BranchId,
-                user.IsActive,
-                user.IsLocked,
-                user.UpdatedBy,
-                user.UpdatedAt,
-                user.RowVersion,
+                Role = userEntity.Role.ToString(),
+                userEntity.BranchId,
+                userEntity.IsActive,
+                userEntity.IsLocked,
+                userEntity.UpdatedBy,
+                userEntity.UpdatedAt,
+                NewRowVersion = userEntity.RowVersion, // Incremented version
+                OldRowVersion = dto.RowVersion,        // Original version from UI
                 Id = dto.Id
             }, transaction);
 
             if (affectedRows <= 0)
             {
-                transaction.Rollback();
-                return Result<bool>.Failure("Update failed. No records were modified.");
+                await transaction.RollbackAsync();
+                return Result<bool>.Failure("Update failed: The record was modified by another user (Concurrency Conflict).");
             }
 
-            //Fetch Branch Code(Separated Logic for Clarity) ---
-                const string branchSql = "SELECT branch_code FROM branches WHERE id = @BranchId;";
-                var branchCode = await conn.QueryFirstOrDefaultAsync<string>(branchSql, new { BranchId = dto.BranchId }, transaction) ?? "N/A";
-       
+            // 5. Fetch New Branch Code for the NewValue snapshot
+            const string branchSql = "SELECT branch_code FROM branches WHERE id = @BranchId;";
+            var newBranchCode = await conn.QueryFirstOrDefaultAsync<string>(branchSql, new { BranchId = userEntity.BranchId }, transaction) ?? "N/A";
 
             // Create Audit Log (Pass the transaction to the audit service if supported)
             var auditDto = new AuditLogCreateDTO(
-                BranchCode: branchCode,
+                BranchCode: newBranchCode,
                 CreatedBy: dto.CreatedBy,
                 UpdatedBy: currentUserId,
                 ApprovedBy: dto.ApprovedBy,
                 TableName: "users",
                 Action: "UPDATE",
-                OldValue: OldValue,
-                NewValue: $"Role:{dto.Role}, Branch:{branchCode}, Active:{dto.IsActive}",
+                OldValue: oldValue,
+                NewValue: $"Role:{userEntity.Role}, Branch:{newBranchCode}, Active:{userEntity.IsActive}, Locked:{userEntity.IsLocked}, Version:{userEntity.RowVersion}",
                 Description: $"User {dto.Username} updated by ID {currentUserId}"
             );
 
-            // NOTE: Ensure your _auditLogService.CreateAuditLogAsync can accept an IDbTransaction
-            var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
+            // Crucial: Pass the existing transaction to the audit service
+            var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto, conn, transaction);
 
             if (!auditResult.IsSuccess)
             {
-                transaction.Rollback(); // Rollback update if audit fails
-                return Result<bool>.Failure("Audit log failed. Update rolled back.");
+                await transaction.RollbackAsync();
+                return Result<bool>.Failure("Security Policy Violation: Audit log failed. Transaction aborted.");
             }
 
-            transaction.Commit(); // Success! Save everything.
+            await transaction.CommitAsync();
             return Result<bool>.Success(true, "User updated successfully.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            transaction.Rollback(); // Rollback on any error
-            return Result<bool>.Failure("Database Error: " + ex.Message);
+            await transaction.RollbackAsync();
+            return Result<bool>.Failure("A critical database error occurred. Operation rolled back.");
         }
     }
 
@@ -349,6 +302,11 @@ public class UserService : IUserService
 
 
 
+
+
+
+
+    // ---------------------------------- ALL USERS ------------------------------
 
     public async Task<Result<IEnumerable<GetAllUsersIdAndNameDTO>>> GetAllUsersIdAndNameAsync()
     {
