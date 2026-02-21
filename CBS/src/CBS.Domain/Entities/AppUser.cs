@@ -64,7 +64,7 @@ public class AppUser
 
 
  // a static method to reconstruct the object or you map it
-    public static AppUser Reconstruct(int id, string username, UserRole role, int branchId, bool isActive, bool isLocked, int rowVersion)
+    public static AppUser Reconstruct(int id, string username, UserRole role, int branchId, bool isActive, bool isLocked, int rowVersion, int failedAttempts)
     {
         return new AppUser
         {
@@ -74,7 +74,8 @@ public class AppUser
             BranchId = branchId,
             IsActive = isActive,
             IsLocked = isLocked,
-            RowVersion = rowVersion
+            RowVersion = rowVersion,
+            FailedAttempts = failedAttempts
         };
     }
 
@@ -113,6 +114,7 @@ public class AppUser
             IsLocked = true;
             LockUntil = nowUtc.Add(lockDuration);
         }
+
     }
 
 

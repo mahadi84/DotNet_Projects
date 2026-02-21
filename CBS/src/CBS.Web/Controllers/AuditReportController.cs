@@ -1,11 +1,14 @@
 ﻿using CBS.Application.DTO;
 using CBS.Application.Interfaces;
 using CBS.Domain.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CBS.Web.Controllers;
 
+
+[Authorize(Roles = "HoSuperAdmin,Maker")]
 public class AuditReportController : Controller
 {
     private readonly IAuditLogService _auditLogService;

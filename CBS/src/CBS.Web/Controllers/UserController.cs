@@ -1,16 +1,17 @@
 ﻿using CBS.Application.DTO;
 using CBS.Application.Interfaces;
 using CBS.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Threading.Tasks;
 
 namespace CBS.Web.Controllers;
-    
 
 
 
-    public class UserController : Controller
+[Authorize(Roles = "HoSuperAdmin,Maker")]
+public class UserController : Controller
     {
        
 

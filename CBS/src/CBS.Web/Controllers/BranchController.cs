@@ -1,10 +1,13 @@
 ﻿using CBS.Application.DTO;
 using CBS.Application.Interfaces;
 using CBS.Domain.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CBS.Web.Controllers;
 
+
+[Authorize(Roles = "HoSuperAdmin,Maker")]
 public class BranchController : Controller
 {
     private readonly IBranchService _branchService;

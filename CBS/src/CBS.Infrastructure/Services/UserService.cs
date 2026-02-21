@@ -217,7 +217,7 @@ public class UserService : IUserService
             // 3. Apply Domain Logic and Concurrency Check
             var userEntity = AppUser.Reconstruct(
                 (int)oldData.id, (string)oldData.username, (UserRole)Enum.Parse(typeof(UserRole), oldData.role),
-                (int)oldData.branch_id, (bool)oldData.is_active, (bool)oldData.is_locked, (int)oldData.row_version
+                (int)oldData.branch_id, (bool)oldData.is_active, (bool)oldData.is_locked, (int)oldData.row_version, (int)oldData.failed_attempts
             );
 
             try
